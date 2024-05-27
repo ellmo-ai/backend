@@ -19,6 +19,14 @@ RUN rm src/main.rs
 # Copy the entire project
 COPY . .
 
+RUN cargo install diesel_cli --no-default-features --features postgres
+
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
+
+# Run diesel setup
+RUN diesel setup --database-url $DATABASE_URL
+
 # Build the release binary
 RUN cargo install --path .
 
