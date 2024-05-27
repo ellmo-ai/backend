@@ -24,14 +24,10 @@ RUN cargo install diesel_cli --no-default-features --features postgres
 ARG DATABASE_URL
 ENV DATABASE_URL=${DATABASE_URL}
 
-# Run diesel setup
-RUN diesel setup --database-url $DATABASE_URL
-
 # Build the release binary
 RUN cargo install --path .
 
 # Expose the port your Rust server listens on
 EXPOSE 3000
 
-# Set the entry point to run the Rust server
-CMD ["ollyllm"]
+CMD sh -c "diesel setup --database-url $DATABASE_URL && ollyllm"

@@ -1,6 +1,6 @@
-# Setup
-1. Copy .env.EXAMPLE into .env and replace DATABASE_URL value
-2. Run following
-```bash
-dieset setup
-```
+# backend
+
+## Getting started
+
+1. copy `.env.example` to `.env` and replace the values
+2. run `docker-compose up`
