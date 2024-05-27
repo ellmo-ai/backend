@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::spans)]
+#[diesel(table_name = crate::db::schema::spans)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Span {
     pub id: i32,

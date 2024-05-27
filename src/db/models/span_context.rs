@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::span_contexts)]
+#[diesel(table_name = crate::db::schema::span_contexts)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct SpanContext {
     pub id: i32,
