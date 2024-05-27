@@ -524,7 +524,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "observe_llm"
+name = "ollyllm"
 version = "0.1.0"
 dependencies = [
  "axum",
