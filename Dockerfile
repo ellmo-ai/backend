@@ -1,5 +1,5 @@
 # Use the latest Rust nightly image as the base
-FROM rust:1.76.0
+FROM rust:1.78.0
 
 # Set the working directory
 WORKDIR /app
@@ -19,7 +19,7 @@ RUN rm src/main.rs
 # Copy the entire project
 COPY . .
 
-RUN cargo install diesel_cli --no-default-features --features postgres
+RUN cargo install diesel_cli --version 2.2.0 --no-default-features --features postgres
 
 ARG DATABASE_URL
 ENV DATABASE_URL=${DATABASE_URL}

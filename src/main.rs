@@ -3,16 +3,12 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use serde::Deserialize;
 use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
-    tracing_subscriber::fmt::init();
-
-    // build our application with a route
     let app = Router::new()
-        // `GET /` goes to `root`
         .route("/", get(root))
         .route("/api/v1/tracing", post(tracing))
         .layer(CorsLayer::permissive());
@@ -27,10 +23,24 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-struct TracingPayload {
-
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Span {
+    id: String,
+    parent_span_id: Option<String>,
+    start_time: u64,
+    end_time: u64,
+    operation_name: String,
+    child_spans: Vec<Span>,
 }
 
-async fn tracing() -> (StatusCode, Json<()>) {
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct TracingPayload {
+    traces: Vec<Span>
+}
+
+async fn tracing(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) {
+    println!("{:?}", payload);
     (StatusCode::OK, Json(()))
 }
