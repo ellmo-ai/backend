@@ -4,6 +4,9 @@ FROM rust:1.78.0
 # Set the working directory
 WORKDIR /app
 
+# Install cargo-watch
+RUN cargo install cargo-watch
+
 # Copy the Cargo.toml and Cargo.lock files
 COPY Cargo.toml Cargo.lock ./
 
@@ -11,7 +14,7 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 
 # Build dependencies
-RUN cargo build --release
+RUN cargo build # --release
 
 # Remove the dummy source file
 RUN rm src/main.rs
@@ -30,4 +33,5 @@ RUN cargo install --path .
 # Expose the port your Rust server listens on
 EXPOSE 3000
 
-CMD sh -c "diesel setup --database-url $DATABASE_URL && ollyllm"
+# Use cargo-watch to rebuild and run the server on changes
+CMD sh -c "diesel setup --database-url $DATABASE_URL && cargo watch -x 'run'" #--release
