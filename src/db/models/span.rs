@@ -1,6 +1,6 @@
-use diesel::prelude::*;
 use crate::db::models::repository::{DieselRepository, Repository};
 use crate::db::schema::spans::dsl::spans;
+use diesel::prelude::*;
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::db::schema::spans)]
@@ -48,6 +48,8 @@ impl<'a> Repository for DieselRepository<'a, spans> {
     }
 
     fn delete(&mut self, id: Self::Id) -> QueryResult<()> {
-        diesel::delete(self.table.find(id)).execute(self.connection).map(|_| ())
+        diesel::delete(self.table.find(id))
+            .execute(self.connection)
+            .map(|_| ())
     }
 }

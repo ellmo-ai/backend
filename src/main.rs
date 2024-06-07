@@ -4,10 +4,10 @@ use axum::{
     Json, Router,
 };
 use chrono::TimeZone;
-use serde::Deserialize;
-use tower_http::cors::CorsLayer;
 use ollyllm::db;
 use ollyllm::db::models::repository::{DieselRepository, Repository};
+use serde::Deserialize;
+use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
@@ -40,7 +40,7 @@ struct Span {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct TracingPayload {
-    traces: Vec<Span>
+    traces: Vec<Span>,
 }
 
 async fn tracing(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) {
@@ -59,7 +59,11 @@ async fn tracing(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) 
         let end_time = chrono::Utc.timestamp_millis_opt(span.end_time as i64);
 
         // Check if both start and end times are valid
-        if let (chrono::LocalResult::Single(valid_start_time), chrono::LocalResult::Single(valid_end_time)) = (start_time, end_time) {
+        if let (
+            chrono::LocalResult::Single(valid_start_time),
+            chrono::LocalResult::Single(valid_end_time),
+        ) = (start_time, end_time)
+        {
             // Create a new InsertableSpan
             let insertable_span = db::models::span::InsertableSpan {
                 ts_start: valid_start_time,
