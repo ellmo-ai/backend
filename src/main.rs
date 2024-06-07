@@ -29,7 +29,9 @@ async fn root() -> &'static str {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Span {
+    #[allow(dead_code)]
     id: String,
+    #[allow(dead_code)]
     parent_span_id: Option<String>,
     start_time: u64,
     end_time: u64,
