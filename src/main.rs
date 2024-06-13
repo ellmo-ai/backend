@@ -84,9 +84,10 @@ async fn tracing(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) 
         } else {
             // If start or end time is invalid, process child spans
             println!("Invalid start/end time");
-            for child_span in span.child_spans {
-                process_span(child_span, repo);
-            }
+        }
+
+        for child_span in span.child_spans {
+            process_span(child_span, repo);
         }
     }
 
