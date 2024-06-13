@@ -10,9 +10,8 @@ pub struct Span {
     pub ts_start: chrono::DateTime<chrono::Utc>,
     pub ts_end: chrono::DateTime<chrono::Utc>,
     pub operation_name: String,
-    pub attribute_ids: Vec<Option<i32>>,
-    pub event_ids: Vec<Option<i32>>,
-    pub link_ids: Vec<Option<i32>>,
+    pub parent_span_id: Option<i32>,
+    pub external_uuid: Option<uuid::Uuid>,
 }
 
 #[derive(Insertable, Selectable, Queryable)]
@@ -22,9 +21,8 @@ pub struct InsertableSpan {
     pub ts_start: chrono::DateTime<chrono::Utc>,
     pub ts_end: chrono::DateTime<chrono::Utc>,
     pub operation_name: String,
-    pub attribute_ids: Vec<Option<i32>>,
-    pub event_ids: Vec<Option<i32>>,
-    pub link_ids: Vec<Option<i32>>,
+    pub parent_span_id: Option<i32>,
+    pub external_uuid: Option<uuid::Uuid>,
 }
 
 impl<'a> Repository for DieselRepository<'a, spans> {

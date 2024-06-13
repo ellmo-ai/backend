@@ -7,7 +7,10 @@ use chrono::TimeZone;
 use ollyllm::db;
 use ollyllm::db::models::repository::{DieselRepository, Repository};
 use serde::Deserialize;
+use std::collections::HashMap;
+use std::str::FromStr;
 use tower_http::cors::CorsLayer;
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() {
@@ -29,9 +32,7 @@ async fn root() -> &'static str {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Span {
-    #[allow(dead_code)]
     id: String,
-    #[allow(dead_code)]
     parent_span_id: Option<String>,
     start_time: u64,
     end_time: u64,
@@ -55,7 +56,13 @@ async fn tracing(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) 
         table: db::schema::spans::table,
     };
 
-    fn process_span(span: Span, repo: &mut DieselRepository<db::schema::spans::table>) {
+    let mut uuid_to_span_id: HashMap<String, i32> = HashMap::new();
+
+    fn process_span(
+        span: Span,
+        repo: &mut DieselRepository<db::schema::spans::table>,
+        uuid_to_span_id: &mut HashMap<String, i32>,
+    ) {
         // Convert start and end times to chrono::DateTime
         let start_time = chrono::Utc.timestamp_millis_opt(span.start_time as i64);
         let end_time = chrono::Utc.timestamp_millis_opt(span.end_time as i64);
@@ -66,19 +73,26 @@ async fn tracing(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) 
             chrono::LocalResult::Single(valid_end_time),
         ) = (start_time, end_time)
         {
+            let parent_span_id = span
+                .parent_span_id
+                .and_then(|uuid| uuid_to_span_id.get(&uuid).copied());
+
             // Create a new InsertableSpan
             let insertable_span = db::models::span::InsertableSpan {
                 ts_start: valid_start_time,
                 ts_end: valid_end_time,
                 operation_name: span.operation_name,
-                attribute_ids: vec![],
-                event_ids: vec![],
-                link_ids: vec![],
+                parent_span_id,
+                external_uuid: Uuid::from_str(&span.id).ok(),
             };
 
             // Attempt to create the span in the repository
             match repo.create(&insertable_span) {
-                Ok(_) => println!("Span created"),
+                Ok(created_span) => {
+                    // If span was created successfully, add the UUID to span ID mapping
+                    println!("Span created successfully");
+                    uuid_to_span_id.insert(span.id, created_span.id);
+                }
                 Err(e) => println!("Error creating span: {:?}", e),
             }
         } else {
@@ -87,12 +101,12 @@ async fn tracing(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) 
         }
 
         for child_span in span.child_spans {
-            process_span(child_span, repo);
+            process_span(child_span, repo, uuid_to_span_id);
         }
     }
 
     for span in traces {
-        process_span(span, &mut repo);
+        process_span(span, &mut repo, &mut uuid_to_span_id);
     }
 
     (StatusCode::OK, Json(()))

@@ -1,12 +1,11 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    span_contexts (id) {
+    logs (id) {
         id -> Int4,
-        trace_id -> Int4,
+        ts -> Timestamptz,
+        message -> Text,
         span_id -> Int4,
-        trace_options -> Nullable<Bytea>,
-        trace_state -> Nullable<Jsonb>,
     }
 }
 
@@ -16,10 +15,11 @@ diesel::table! {
         ts_start -> Timestamptz,
         ts_end -> Timestamptz,
         operation_name -> Text,
-        attribute_ids -> Array<Nullable<Int4>>,
-        event_ids -> Array<Nullable<Int4>>,
-        link_ids -> Array<Nullable<Int4>>,
+        parent_span_id -> Nullable<Int4>,
+        external_uuid -> Nullable<Uuid>,
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(span_contexts, spans,);
+diesel::joinable!(logs -> spans (span_id));
+
+diesel::allow_tables_to_appear_in_same_query!(logs, spans,);
