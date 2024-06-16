@@ -14,7 +14,7 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 
 # Build dependencies
-RUN cargo build # --release
+RUN cargo build # Build dependencies in release mode
 
 # Remove the dummy source file
 RUN rm src/main.rs
@@ -22,8 +22,10 @@ RUN rm src/main.rs
 # Copy the entire project
 COPY . .
 
+# Install diesel_cli (if needed)
 RUN cargo install diesel_cli --version 2.2.0 --no-default-features --features postgres
 
+# ARG and ENV for database URL
 ARG DATABASE_URL
 ENV DATABASE_URL=${DATABASE_URL}
 
@@ -34,4 +36,4 @@ RUN cargo install --path .
 EXPOSE 3000
 
 # Use cargo-watch to rebuild and run the server on changes
-CMD sh -c "diesel setup --database-url $DATABASE_URL && cargo watch -x 'run'" #--release
+CMD sh -c "diesel setup --database-url $DATABASE_URL && cargo watch -x 'run --release'"
