@@ -1,8 +1,11 @@
+use deno_core::error::AnyError;
 use deno_core::futures::FutureExt;
-use deno_core::JsRuntime;
+use deno_core::include_js_files;
+use deno_core::v8;
+use deno_core::Extension;
 use deno_core::ModuleSpecifier;
-use deno_core::RuntimeOptions;
 use deno_core::{FsModuleLoader, PollEventLoopOptions};
+use deno_core::{JsRuntime, RuntimeOptions};
 use std::str::FromStr;
 use std::sync::Arc;
 use swc_ecma_ast::Module;
@@ -24,37 +27,28 @@ fn ast_to_source_code(ast: Module) -> String {
     String::from_utf8(buf).unwrap()
 }
 
-pub async fn execute_ast(ast: Module) -> Result<(), Box<dyn std::error::Error>> {
-    // Convert AST to source code
+pub fn execute_ast(
+    ast: Module,
+) -> impl std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send>>> + Send {
     let source_code = ast_to_source_code(ast);
 
-    // Create a runtime
-    let module_loader = Arc::new(FsModuleLoader);
-    let options = RuntimeOptions {
-        module_loader: Some(module_loader.into()),
-        ..Default::default()
-    };
+    tokio::task::spawn_blocking(move || {
+        // Create a new JsRuntime with the custom extension.
+        let mut js_runtime = JsRuntime::new(RuntimeOptions {
+            ..Default::default()
+        });
 
-    // Load the source code as a module
-    let mut runtime = JsRuntime::new(options);
-    let module_specifier = ModuleSpecifier::from_str("file:///main.js").unwrap();
+        // Execute the JavaScript code.
+        js_runtime.execute_script("<usage>", source_code).unwrap();
 
-    let main_module_id = runtime
-        .load_main_es_module_from_code(&module_specifier, source_code.clone())
-        .await
-        .unwrap();
+        // Run the event loop to completion.
+        let _ = js_runtime.run_event_loop(PollEventLoopOptions::default());
 
-    runtime.execute_script("main.js", source_code).unwrap();
-
-    // Evaluate the main module
-    let result = runtime.mod_evaluate(main_module_id).boxed_local();
-
-    runtime
-        .run_event_loop(PollEventLoopOptions::default())
-        .await
-        .unwrap();
-
-    result.await.unwrap();
-
-    Ok(())
+        Ok(())
+    })
+    .map(|res| {
+        res.unwrap_or_else(|join_error| {
+            Err(Box::new(join_error) as Box<dyn std::error::Error + Send>)
+        })
+    })
 }

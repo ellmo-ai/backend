@@ -21,10 +21,10 @@ impl Job for RegisterTestJob {
     async fn execute(&self) {
         let ast = parse_js_to_ast(&self.content);
         let res = execute_ast(ast).await;
-        // match res {
-        //     Ok(_) => println!("Execution succeeded"),
-        //     Err(e) => eprintln!("Execution failed: {}", e),
-        // }
+        match res {
+            Ok(_) => println!("Execution succeeded"),
+            Err(e) => eprintln!("Execution failed: {}", e),
+        }
     }
 }
 
