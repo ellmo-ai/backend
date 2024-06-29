@@ -4,6 +4,9 @@ mod queue;
 mod register;
 mod tracing;
 
+use server::register;
+use server:tracing;
+
 use axum::{
     routing::{get, post},
     Router,
