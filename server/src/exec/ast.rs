@@ -3,6 +3,7 @@ use swc_common::BytePos;
 use swc_ecma_parser::{Parser, Syntax};
 
 pub fn parse_js_to_ast(js_code: &str) -> swc_ecma_ast::Module {
+    #[allow(deprecated)]
     let parse_options = swc_ecma_parser::TsConfig {
         tsx: false,
         decorators: true,
