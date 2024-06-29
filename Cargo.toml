@@ -1,28 +1,4 @@
-[package]
-name = "ollyllm"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[dependencies]
-axum = "0.7.5"
-chrono = "0.4.38"
-deno_core = "0.289.0"
-diesel = { version = "2.2.0", features = ["postgres", "chrono", "serde_json", "uuid"] }
-dotenvy = "0.15"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.68"
-swc = "0.278.0"
-swc_common = "0.34.0"
-swc_ecma_ast = "0.115.0"
-swc_ecma_codegen = "0.151.0"
-swc_ecma_parser = "0.146.0"
-tokio = { version = "1.0", features = ["full"] }
-tower-http = { version = "0.5.2", features = ["cors"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-uuid = { version = "1.8.0", features = ["v4"] }
-async-trait = "0.1.80"
-reqwest = "0.12.4"
-data-url = "0.3.1"
-lazy_static = "1.4.0"
-crossbeam-channel = "0.5.13"
+members = ["server",]
+
