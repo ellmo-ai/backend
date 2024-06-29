@@ -1,5 +1,6 @@
 use diesel::QueryResult;
 
+#[allow(dead_code)]
 pub trait Repository {
     type Entity;
     type InsertableEntity;

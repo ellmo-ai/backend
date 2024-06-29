@@ -36,7 +36,3 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
 
     (StatusCode::OK, Json(()))
 }
-
-pub async fn test_result_post() -> (StatusCode, Json<()>) {
-    (StatusCode::OK, Json(()))
-}

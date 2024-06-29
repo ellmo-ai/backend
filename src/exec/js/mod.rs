@@ -1,12 +1,6 @@
-use deno_core::error::AnyError;
 use deno_core::futures::FutureExt;
-use deno_core::include_js_files;
-use deno_core::v8;
-use deno_core::Extension;
-use deno_core::ModuleSpecifier;
-use deno_core::{FsModuleLoader, PollEventLoopOptions};
+use deno_core::PollEventLoopOptions;
 use deno_core::{JsRuntime, RuntimeOptions};
-use std::str::FromStr;
 use std::sync::Arc;
 use swc_ecma_ast::Module;
 use swc_ecma_codegen::{text_writer::JsWriter, Emitter};
@@ -42,6 +36,7 @@ pub fn execute_ast(
         js_runtime.execute_script("<usage>", source_code).unwrap();
 
         // Run the event loop to completion.
+        #[allow(clippy::let_underscore_future)]
         let _ = js_runtime.run_event_loop(PollEventLoopOptions::default());
 
         Ok(())

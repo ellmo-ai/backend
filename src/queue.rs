@@ -1,6 +1,5 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use lazy_static::lazy_static;
-use std::collections::VecDeque;
 use std::sync::Mutex;
 
 lazy_static! {

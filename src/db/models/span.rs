@@ -5,6 +5,7 @@ use diesel::prelude::*;
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::db::schema::spans)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
+#[allow(dead_code)]
 pub struct Span {
     pub id: i32,
     pub ts_start: chrono::DateTime<chrono::Utc>,
