@@ -1,4 +1,4 @@
 [workspace]
-
-members = ["server",]
+members = ["proto", "server",]
+resolver = "1"
 

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package code_execution;
+import "google/protobuf/timestamp.proto";
+
+service TestExecution {
+    rpc QueueTest  (TestExecutionRequest) returns (TestExecutionResponse) {}
+}
+
+message VersionedTest {
+    int32 test_id = 1;
+    int32 test_version = 2;
+}
+
+message TestExecutionRequest {
+    int32 session_id = 1;
+    VersionedTest versioned_test = 2;
+    string test_input = 3;
+    google.protobuf.Timestamp request_timestamp = 4; 
+}
+
+message TestExecutionResponse {
+    int32 session_id = 1;
+    VersionedTest versioned_test = 2;
+}
