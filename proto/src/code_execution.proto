@@ -7,19 +7,36 @@ service TestExecution {
     rpc QueueTest  (TestExecutionRequest) returns (TestExecutionResponse) {}
 }
 
+/*  VersionedTest represents a unique test.
+    params:
+    - test_id: ID of the test
+    - test_version: Integer representing the version of the test
+*/
 message VersionedTest {
     int32 test_id = 1;
     int32 test_version = 2;
 }
 
+/*  TestExecutionRequest represents a request to execute a versioned test.
+    params:
+    - session_id: ID representing the trace session
+    - versioned_test: Message representing a unique test
+    - test_input: String array representing stringified inputs to the test
+    - request_timestamp: Timestramp representing when this test execution was requested by the client
+*/
 message TestExecutionRequest {
     int32 session_id = 1;
     VersionedTest versioned_test = 2;
-    string test_input = 3;
+    repeated string test_input = 3;
     google.protobuf.Timestamp request_timestamp = 4; 
 }
 
+/*  TestExecutionResponse represents the response sent to client after receiving a TestExecutionRequest.
+    params:
+    - versioned_test: Message representing the unique test that was requested
+    - test_input: String array representing stringified inputs to the requested test
+*/
 message TestExecutionResponse {
-    int32 session_id = 1;
-    VersionedTest versioned_test = 2;
+    VersionedTest versioned_test = 1;
+    repeated string test_input = 2;
 }
