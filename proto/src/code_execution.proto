@@ -1,42 +1,39 @@
 syntax = "proto3";
 
 package code_execution;
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 service TestExecution {
-    rpc QueueTest  (TestExecutionRequest) returns (TestExecutionResponse) {}
+    rpc QueueTest  (TestExecutionRequest) returns (google.protobuf.Empty) {}
 }
 
-/*  VersionedTest represents a unique test.
-    params:
-    - test_id: ID of the test
-    - test_version: Integer representing the version of the test
-*/
+/*  VersionedTest represents a unique test. */
 message VersionedTest {
-    int32 test_id = 1;
-    int32 test_version = 2;
+    int32 id = 1; // ID of test
+    int32 version = 2; // Version of test
 }
 
-/*  TestExecutionRequest represents a request to execute a versioned test.
-    params:
-    - session_id: ID representing the trace session
-    - versioned_test: Message representing a unique test
-    - test_input: String array representing stringified inputs to the test
-    - request_timestamp: Timestramp representing when this test execution was requested by the client
-*/
+/* TestInput represents a single input parameter for a test */
+message TestInput {
+    /* Type maps primitive types in TypeScript/Python to an enum value */
+    enum Type {
+        Bool = 0;
+        String = 1;
+        Number = 2;
+        Int = 3;
+        Float = 4;
+        StringifiedJson = 6;
+    }
+    Type type = 1; // Type of the argument
+    string value = 2; // Stringified value of the argument
+}
+
+/*  TestExecutionRequest represents a request to execute a versioned test. */
 message TestExecutionRequest {
-    int32 session_id = 1;
-    VersionedTest versioned_test = 2;
-    repeated string test_input = 3;
-    google.protobuf.Timestamp request_timestamp = 4; 
+    int32 session_id = 1; // ID of trace session
+    VersionedTest versioned_test = 2; // Unique test
+    repeated TestInput test_input = 3; // List of parameters for test
+    google.protobuf.Timestamp request_timestamp = 4;  // Client request time of test execution 
 }
 
-/*  TestExecutionResponse represents the response sent to client after receiving a TestExecutionRequest.
-    params:
-    - versioned_test: Message representing the unique test that was requested
-    - test_input: String array representing stringified inputs to the requested test
-*/
-message TestExecutionResponse {
-    VersionedTest versioned_test = 1;
-    repeated string test_input = 2;
-}
