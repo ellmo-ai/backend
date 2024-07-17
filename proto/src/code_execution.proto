@@ -4,8 +4,9 @@ package code_execution;
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
-service TestExecution {
+service CodeExecution {
     rpc QueueTest  (TestExecutionRequest) returns (google.protobuf.Empty) {}
+    rpc QueueSpan (SpanCreationRequest) returns (google.protobuf.Empty) {}
 }
 
 /*  VersionedTest represents a unique test. */
@@ -37,3 +38,13 @@ message TestExecutionRequest {
     google.protobuf.Timestamp request_timestamp = 4;  // Client request time of test execution 
 }
 
+
+/* SpanCreationRequest represents a request to create a single span */
+message SpanCreationRequest {
+    int32 id = 1; // ID of the span
+    google.protobuf.Timestamp start_timestamp = 2; // Timestamp of span start
+    google.protobuf.Timestamp end_timestamp = 3; // Timestamp of span ending
+    string operation_name = 4; // Name of the operation that span takes place in
+    int32 parent_id = 5; // ID of the span's parent, if exists
+    string external_uuid = 6; // User facing ID of the span
+}
