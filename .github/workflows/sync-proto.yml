@@ -1,0 +1,19 @@
+on:
+  push:
+    branches: [ 'main' ]
+    paths:
+      - proto/**/*.proto
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    name: "Update proto files"
+    strategy:
+      matrix:
+        repo: [ 'sdk' ]
+    steps:
+    - uses: passeidireto/trigger-external-workflow-action@main
+      with:
+        repository: ollyLLM/${{ matrix.repo }}
+        event: proto_update
+        github_pat: ${{ secrets.sync_token }}
+      
