@@ -1,3 +1,5 @@
+name: Sync proto files
+
 on:
   push:
     branches: [ 'main' ]
