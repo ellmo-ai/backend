@@ -1,3 +1,3 @@
-pub mod code_execution {
-    tonic::include_proto!("code_execution");
+pub mod ollyllm {
+    tonic::include_proto!("ollyllm");
 }

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package ollyllm;
+
+import "google/protobuf/timestamp.proto";
+
+/*  VersionedTest represents a unique test. */
+message VersionedTest {
+    int32 id = 1; // ID of test
+    int32 version = 2; // Version of test
+}
+
+/*  TestExecutionRequest represents a request to execute a versioned test. */
+message TestExecutionRequest {
+    int32 session_id = 1; // ID of trace session
+    VersionedTest versioned_test = 2; // Unique test
+    repeated bytes test_input = 3; // List of parameters for test
+    google.protobuf.Timestamp request_timestamp = 4;  // Client request time of test execution 
+}
+
