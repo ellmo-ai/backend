@@ -6,7 +6,7 @@ on:
 jobs:
   trigger:
     runs-on: ubuntu-latest
-    name: "Update proto files"
+    name: "Sync proto files"
     strategy:
       matrix:
         repo: [ 'sdk' ]
@@ -17,5 +17,5 @@ jobs:
       with:
         repository: ollyLLM/${{ matrix.repo }}
         event: proto_update
-        github_pat: ${{ secrets.sync_token }}
+        github_pat: ${{ secrets.SYNC_TOKEN }}
       
