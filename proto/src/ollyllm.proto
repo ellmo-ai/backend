@@ -11,4 +11,3 @@ service ollyllm {
     rpc QueueTest  (TestExecutionRequest) returns (google.protobuf.Empty) {}
     rpc QueueSpan (SpanCreationRequest) returns (google.protobuf.Empty) {}
 }
-
