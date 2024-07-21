@@ -12,6 +12,8 @@ jobs:
         repo: [ 'sdk' ]
     steps:
     - uses: passeidireto/trigger-external-workflow-action@main
+      env:
+        PAYLOAD_COMMIT_SHA: ${{ github.sha }}
       with:
         repository: ollyLLM/${{ matrix.repo }}
         event: proto_update
