@@ -4,7 +4,7 @@ on:
   push:
     branches: [ 'main' ]
     paths:
-      - proto/**/*.proto
+      - proto/definitions/**/*.proto
 jobs:
   trigger:
     runs-on: ubuntu-latest

@@ -3,6 +3,14 @@ name = "proto"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "run-server"
+path = "src/run_server.rs"
+
+[[bin]]
+name = "run-example-client"
+path = "src/examples/run_client.rs"
+
 [dependencies]
 prost = "0.13"
 prost-types = "0.13"
