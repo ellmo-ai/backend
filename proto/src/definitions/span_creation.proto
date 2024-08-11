@@ -13,4 +13,4 @@ message SpanCreationRequest {
   string parent_id = 5;      // ID of the span's parent, if exists
   string trace_id = 6;       // ID of the span's trace
   string external_uuid = 7;  // User facing ID of the span
-}
+};

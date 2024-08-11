@@ -8,6 +8,6 @@ import "test_execution.proto";
 import "span_creation.proto";
 
 service ollyllm {
-    rpc QueueTest  (TestExecutionRequest) returns (google.protobuf.Empty) {}
-    rpc QueueSpan (SpanCreationRequest) returns (google.protobuf.Empty) {}
-}
+  rpc QueueTest(TestExecutionRequest) returns (google.protobuf.Empty) {}
+  rpc QueueSpan(SpanCreationRequest) returns (google.protobuf.Empty) {}
+};
