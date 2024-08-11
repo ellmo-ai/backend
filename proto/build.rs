@@ -1,4 +1,4 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_build::compile_protos("src/ollyllm.proto")?;
+    tonic_build::compile_protos("src/definitions/ollyllm.proto")?;
     Ok(())
 }

@@ -13,7 +13,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./server
+        working-directory: ./
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -24,6 +24,9 @@ jobs:
         toolchain: stable
         override: true
         components: rustfmt, clippy
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
 
     - name: Cache Cargo registry
       uses: actions/cache@v2
