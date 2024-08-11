@@ -3,14 +3,14 @@ use std::pin::Pin;
 
 use tonic::transport;
 
-use crate::ollyllm::ollyllm_server::{Ollyllm, OllyllmServer};
+use crate::ollyllm::ollyllm_service_server::{OllyllmService, OllyllmServiceServer};
 use crate::ollyllm::{SpanCreationRequest, TestExecutionRequest};
 
 #[derive(Default)]
 struct OllyllmRpcDefinition {}
 
 #[tonic::async_trait]
-impl Ollyllm for OllyllmRpcDefinition {
+impl OllyllmService for OllyllmRpcDefinition {
     async fn queue_test(
         &self,
         _request: tonic::Request<TestExecutionRequest>,
@@ -35,7 +35,7 @@ impl RpcServer {
     pub async fn new(addr: core::net::SocketAddr) -> Self {
         let ollyllm: OllyllmRpcDefinition = OllyllmRpcDefinition::default();
         let server = transport::Server::builder()
-            .add_service(OllyllmServer::new(ollyllm))
+            .add_service(OllyllmServiceServer::new(ollyllm))
             .serve(addr);
 
         RpcServer {
