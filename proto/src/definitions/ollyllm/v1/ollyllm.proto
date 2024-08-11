@@ -1,13 +1,12 @@
 syntax = "proto3";
 
-package ollyllm;
+package ollyllm.v1;
 
 import "google/protobuf/empty.proto";
-
-import "test_execution.proto";
 import "span_creation.proto";
+import "test_execution.proto";
 
-service ollyllm {
+service OllyllmService {
   rpc QueueTest(TestExecutionRequest) returns (google.protobuf.Empty) {}
   rpc QueueSpan(SpanCreationRequest) returns (google.protobuf.Empty) {}
-};
+}

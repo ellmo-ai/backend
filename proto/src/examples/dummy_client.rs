@@ -1,15 +1,15 @@
-use crate::ollyllm::ollyllm_client::OllyllmClient;
+use crate::ollyllm::ollyllm_service_client::OllyllmServiceClient;
 use crate::ollyllm::{SpanCreationRequest, TestExecutionRequest, VersionedTest};
 use prost_types::Timestamp;
 use tonic::transport::Channel;
 
 pub struct Client {
-    client: OllyllmClient<Channel>,
+    client: OllyllmServiceClient<Channel>,
 }
 
 impl Client {
     pub async fn new() -> Result<Self, tonic::transport::Error> {
-        let client = OllyllmClient::connect("http://[::1]:50051").await?;
+        let client = OllyllmServiceClient::connect("http://[::1]:50051").await?;
         Ok(Client { client })
     }
 
