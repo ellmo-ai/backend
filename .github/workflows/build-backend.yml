@@ -27,6 +27,13 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v3
+      with:
+        github_token: ${{ secrets.SYNC_TOKEN }}
+
+    - name: Setup buf
+      uses: bufbuild/buf-setup-action@v1.34.0
+      with:
+        github_token: ${{ secrets.SYNC_TOKEN }}
 
     - name: Cache Cargo registry
       uses: actions/cache@v2
