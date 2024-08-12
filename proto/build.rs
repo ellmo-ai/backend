@@ -1,4 +1,16 @@
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_build::compile_protos("src/definitions/ollyllm/v1/ollyllm.proto")?;
+use std::error::Error;
+use std::process::{exit, Command};
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let status = Command::new("buf")
+        .arg("generate")
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .status()
+        .unwrap();
+
+    if !status.success() {
+        exit(status.code().unwrap_or(-1))
+    }
+
     Ok(())
 }
