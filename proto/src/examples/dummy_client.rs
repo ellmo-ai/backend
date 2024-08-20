@@ -1,5 +1,5 @@
 use crate::ollyllm::ollyllm_service_client::OllyllmServiceClient;
-use crate::ollyllm::{SpanCreationRequest, TestExecutionRequest, VersionedTest};
+use crate::ollyllm::{ReportSpanRequest, Span, TestExecutionRequest, VersionedTest};
 use prost_types::Timestamp;
 use tonic::transport::Channel;
 
@@ -16,20 +16,22 @@ impl Client {
     pub async fn send_dummy_span_creation_request(
         &mut self,
     ) -> Result<tonic::Response<()>, tonic::Status> {
-        let span_request: tonic::Request<SpanCreationRequest> =
-            tonic::Request::new(SpanCreationRequest {
-                id: "12345abcd".to_string(),
-                start_timestamp: Some(Timestamp {
-                    seconds: 10,
-                    nanos: 1,
-                }),
-                end_timestamp: None,
-                operation_name: "start call to openai".to_string(),
-                parent_id: "parent_of_12345abcd".to_string(),
-                trace_id: "trace_uuid".to_string(),
-                external_uuid: String::new(),
-            });
-        self.client.queue_span(span_request).await
+        let span = Span {
+            id: "12345abcd".to_string(),
+            start_timestamp: Some(Timestamp {
+                seconds: 10,
+                nanos: 1,
+            }),
+            end_timestamp: None,
+            operation_name: "start call to openai".to_string(),
+            parent_id: "parent_of_12345abcd".to_string(),
+            trace_id: "trace_uuid".to_string(),
+            external_uuid: String::new(),
+        };
+
+        let span_request: tonic::Request<ReportSpanRequest> =
+            tonic::Request::new(ReportSpanRequest { spans: vec![span] });
+        self.client.report_span(span_request).await
     }
 
     pub async fn send_dummy_test_execution_request(

@@ -4,7 +4,7 @@ use std::pin::Pin;
 use tonic::transport;
 
 use crate::ollyllm::ollyllm_service_server::{OllyllmService, OllyllmServiceServer};
-use crate::ollyllm::{SpanCreationRequest, TestExecutionRequest};
+use crate::ollyllm::{ReportSpanRequest, TestExecutionRequest};
 
 #[derive(Default)]
 struct OllyllmRpcDefinition {}
@@ -18,9 +18,9 @@ impl OllyllmService for OllyllmRpcDefinition {
         println!("Received!");
         Ok(tonic::Response::new(()))
     }
-    async fn queue_span(
+    async fn report_span(
         &self,
-        _request: tonic::Request<SpanCreationRequest>,
+        _request: tonic::Request<ReportSpanRequest>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
         println!("Received!");
         Ok(tonic::Response::new(()))
