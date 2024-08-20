@@ -4,6 +4,7 @@ package ollyllm.v1;
 
 import "google/protobuf/timestamp.proto";
 
+/* Span represents a trace span (root or not) reported by a client */
 message Span {
   string id = 1; // ID of the span
   google.protobuf.Timestamp start_timestamp = 2; // Timestamp of span start
