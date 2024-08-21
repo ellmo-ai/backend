@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use crate::ollyllm::ollyllm_service_client::OllyllmServiceClient;
 use crate::ollyllm::{ReportSpanRequest, Span, TestExecutionRequest, VersionedTest};
 use prost_types::Timestamp;
@@ -8,8 +10,8 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new() -> Result<Self, tonic::transport::Error> {
-        let client = OllyllmServiceClient::connect("http://[::1]:50051").await?;
+    pub async fn new(socket_addr: SocketAddr) -> Result<Self, tonic::transport::Error> {
+        let client = OllyllmServiceClient::connect(format!("http://{}", socket_addr)).await?;
         Ok(Client { client })
     }
 
@@ -26,7 +28,6 @@ impl Client {
             operation_name: "start call to openai".to_string(),
             parent_id: "parent_of_12345abcd".to_string(),
             trace_id: "trace_uuid".to_string(),
-            external_uuid: String::new(),
         };
 
         let span_request: tonic::Request<ReportSpanRequest> =
@@ -40,7 +41,10 @@ impl Client {
         let test_request: tonic::Request<TestExecutionRequest> =
             tonic::Request::new(TestExecutionRequest {
                 session_id: 1,
-                versioned_test: Some(VersionedTest { id: 1, version: 1 }),
+                versioned_test: Some(VersionedTest {
+                    name: "no_capitals".to_string(),
+                    version: 1,
+                }),
                 request_timestamp: Some(Timestamp {
                     seconds: 100,
                     nanos: 10,
@@ -53,18 +57,27 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    use tokio::{sync::oneshot, task::JoinHandle};
-
     use super::*;
     use crate::server::RpcServer;
+    use std::net::{SocketAddr, TcpListener};
+    use tokio::{sync::oneshot, task::JoinHandle};
+
+    struct Fresh;
+
+    impl Fresh {
+        fn socker_addr() -> SocketAddr {
+            let listener: TcpListener = TcpListener::bind("127.0.0.1:0").unwrap();
+            listener.local_addr().unwrap()
+        }
+    }
 
     #[tokio::test]
     async fn test_queue_span_creation_request() {
+        let addr: SocketAddr = Fresh::socker_addr();
         let (tx, rx): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel();
 
         let server_handle: JoinHandle<()> = tokio::spawn(async move {
-            let addr: core::net::SocketAddr = "[::1]:50051".parse().unwrap();
-            let server: RpcServer = RpcServer::new(addr).await;
+            let server: RpcServer = RpcServer::new(addr.clone()).await;
 
             tx.send(()).unwrap();
             server.serve().await.unwrap();
@@ -72,7 +85,7 @@ mod tests {
 
         rx.await.unwrap();
 
-        let mut client: Client = Client::new().await.unwrap();
+        let mut client: Client = Client::new(addr).await.unwrap();
         let response: Result<tonic::Response<()>, tonic::Status> =
             client.send_dummy_span_creation_request().await;
 
@@ -83,11 +96,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_queue_test_execution_request() {
+        let addr: SocketAddr = Fresh::socker_addr();
         let (tx, rx): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel();
 
         let server_handle: JoinHandle<()> = tokio::spawn(async move {
-            let addr: core::net::SocketAddr = "[::1]:50051".parse().unwrap();
-            let server: RpcServer = RpcServer::new(addr).await;
+            let server: RpcServer = RpcServer::new(addr.clone()).await;
 
             tx.send(()).unwrap();
             server.serve().await.unwrap();
@@ -95,7 +108,7 @@ mod tests {
 
         rx.await.unwrap();
 
-        let mut client: Client = Client::new().await.unwrap();
+        let mut client: Client = Client::new(addr).await.unwrap();
         let response: Result<tonic::Response<()>, tonic::Status> =
             client.send_dummy_test_execution_request().await;
 
