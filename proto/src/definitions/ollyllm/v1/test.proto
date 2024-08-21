@@ -6,7 +6,7 @@ import "google/protobuf/timestamp.proto";
 
 /*  VersionedTest represents a unique test. */
 message VersionedTest {
-  int32 id = 1; // ID of test
+  string name = 1; // ID of test
   int32 version = 2; // Version of test
 }
 
