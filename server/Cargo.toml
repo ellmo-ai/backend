@@ -2,8 +2,12 @@
 name = "server"
 version = "0.1.0"
 edition = "2021"
+default-run = "server"
 
 [dependencies]
+# Local
+olly_proto = { package = "proto", path = "../proto" }
+
 axum = "0.7.5"
 chrono = "0.4.38"
 deno_core = "0.289.0"

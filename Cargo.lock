@@ -2332,6 +2332,7 @@ dependencies = [
  "diesel",
  "dotenvy",
  "lazy_static",
+ "proto",
  "reqwest",
  "serde",
  "serde_json",
