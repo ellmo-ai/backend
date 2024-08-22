@@ -8,21 +8,29 @@ use axum::{
     routing::{get, post},
     Router,
 };
-
 use tower_http::cors::CorsLayer;
+
+use olly_proto::server::RpcServer;
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/api/v1/tracing", post(tracing::post))
-        .route("/register/test", post(register::test_post))
-        .layer(CorsLayer::permissive());
+    tokio::task::spawn_blocking(|| async {
+        let app = Router::new()
+            .route("/", get(root))
+            .route("/api/v1/tracing", post(tracing::post))
+            .route("/register/test", post(register::test_post))
+            .layer(CorsLayer::permissive());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("listening on {}", listener.local_addr().unwrap());
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        println!("listening on {}", listener.local_addr().unwrap());
 
-    axum::serve(listener, app).await.unwrap();
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let addr: core::net::SocketAddr = "[::1]:50051".parse().unwrap();
+
+    let server: RpcServer = RpcServer::new(addr).await;
+    server.serve().await.unwrap();
 }
 
 async fn root() -> &'static str {
