@@ -2,6 +2,7 @@ mod db;
 mod exec;
 mod queue;
 mod register;
+mod rpc;
 mod tracing;
 
 use axum::{
@@ -10,7 +11,7 @@ use axum::{
 };
 use tower_http::cors::CorsLayer;
 
-use olly_proto::server::RpcServer;
+use rpc::RpcServer;
 
 #[tokio::main]
 async fn main() {
