@@ -7,12 +7,12 @@ import "google/protobuf/timestamp.proto";
 /*  VersionedTest represents a unique test. */
 message VersionedTest {
   string name = 1; // ID of test
-  int32 version = 2; // Version of test
+  string version = 2; // SemVer of test
 }
 
 /*  TestExecutionRequest represents a request to execute a versioned test. */
 message TestExecutionRequest {
-  string span_id = 1; // The associated Span ID for this test (if any).
+  optional string span_id = 1; // The associated Span ID for this test (if any).
   VersionedTest versioned_test = 2; // Unique test
   repeated bytes test_input = 3; // List of parameters for test
   google.protobuf.Timestamp request_timestamp = 4; // Client request time of test execution

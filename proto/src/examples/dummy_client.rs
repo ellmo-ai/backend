@@ -26,7 +26,7 @@ impl Client {
             }),
             end_timestamp: None,
             operation_name: "start call to openai".to_string(),
-            parent_id: "parent_of_12345abcd".to_string(),
+            parent_id: Some("parent_of_12345abcd".to_string()),
             trace_id: "trace_uuid".to_string(),
         };
 
@@ -40,10 +40,10 @@ impl Client {
     ) -> Result<tonic::Response<()>, tonic::Status> {
         let test_request: tonic::Request<TestExecutionRequest> =
             tonic::Request::new(TestExecutionRequest {
-                span_id: "12345abcd".to_string(),
+                span_id: Some("12345abcd".to_string()),
                 versioned_test: Some(VersionedTest {
                     name: "no_capitals".to_string(),
-                    version: 1,
+                    version: "1.0.0".to_string(),
                 }),
                 request_timestamp: Some(Timestamp {
                     seconds: 100,

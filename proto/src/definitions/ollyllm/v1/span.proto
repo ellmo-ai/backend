@@ -10,7 +10,7 @@ message Span {
   google.protobuf.Timestamp start_timestamp = 2; // Timestamp of span start
   google.protobuf.Timestamp end_timestamp = 3; // Timestamp of span ending
   string operation_name = 4; // Name of the operation that span takes place in
-  string parent_id = 5; // ID of the span's parent, if exists
+  optional string parent_id = 5; // ID of the span's parent, if exists
   string trace_id = 6; // ID of the span's trace
 }
 
