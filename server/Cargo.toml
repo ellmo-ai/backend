@@ -8,6 +8,9 @@ default-run = "server"
 # Local
 olly_proto = { package = "proto", path = "../proto" }
 
+tonic = { version= "0.12.0", features = ["prost"] }
+prost-types = "0.13"
+
 axum = "0.7.5"
 chrono = "0.4.38"
 deno_core = "0.289.0"

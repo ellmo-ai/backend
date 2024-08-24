@@ -3,14 +3,6 @@ name = "proto"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "run-server"
-path = "src/run_server.rs"
-
-[[bin]]
-name = "run-example-client"
-path = "src/examples/run_client.rs"
-
 [dependencies]
 tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
 tonic = { version= "0.12.0", features = ["prost"] }
