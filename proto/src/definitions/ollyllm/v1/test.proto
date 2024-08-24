@@ -12,8 +12,9 @@ message VersionedTest {
 
 /*  TestExecutionRequest represents a request to execute a versioned test. */
 message TestExecutionRequest {
-  int32 session_id = 1; // ID of trace session
+  string span_id = 1; // The associated Span ID for this test (if any).
   VersionedTest versioned_test = 2; // Unique test
   repeated bytes test_input = 3; // List of parameters for test
   google.protobuf.Timestamp request_timestamp = 4; // Client request time of test execution
 }
+

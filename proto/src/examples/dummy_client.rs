@@ -40,7 +40,7 @@ impl Client {
     ) -> Result<tonic::Response<()>, tonic::Status> {
         let test_request: tonic::Request<TestExecutionRequest> =
             tonic::Request::new(TestExecutionRequest {
-                session_id: 1,
+                span_id: "12345abcd".to_string(),
                 versioned_test: Some(VersionedTest {
                     name: "no_capitals".to_string(),
                     version: 1,
