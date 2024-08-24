@@ -5,7 +5,7 @@ mod dummy_server;
 mod tests {
     use super::*;
 
-    use dummy_client::Client;
+    use dummy_client::DummyClient;
     use dummy_server::DummyRpcServer;
 
     use std::net::{SocketAddr, TcpListener};
@@ -33,7 +33,7 @@ mod tests {
 
         rx.await.unwrap();
 
-        let mut client: Client = Client::new(addr).await.unwrap();
+        let mut client: DummyClient = DummyClient::new(addr).await.unwrap();
         let response: Result<tonic::Response<()>, tonic::Status> =
             client.send_dummy_span_creation_request().await;
 
@@ -56,7 +56,7 @@ mod tests {
 
         rx.await.unwrap();
 
-        let mut client: Client = Client::new(addr).await.unwrap();
+        let mut client: DummyClient = DummyClient::new(addr).await.unwrap();
         let response: Result<tonic::Response<()>, tonic::Status> =
             client.send_dummy_test_execution_request().await;
 

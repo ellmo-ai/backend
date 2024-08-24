@@ -7,14 +7,14 @@ use tonic::transport::Channel;
 use crate::ollyllm::ollyllm_service_client::OllyllmServiceClient;
 use crate::ollyllm::{ReportSpanRequest, Span, TestExecutionRequest, VersionedTest};
 
-pub struct Client {
+pub struct DummyClient {
     client: OllyllmServiceClient<Channel>,
 }
 
-impl Client {
+impl DummyClient {
     pub async fn new(socket_addr: SocketAddr) -> Result<Self, tonic::transport::Error> {
         let client = OllyllmServiceClient::connect(format!("http://{}", socket_addr)).await?;
-        Ok(Client { client })
+        Ok(DummyClient { client })
     }
 
     pub async fn send_dummy_span_creation_request(
