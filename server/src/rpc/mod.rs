@@ -11,18 +11,32 @@ struct OllyllmRpcDefinition {}
 
 #[tonic::async_trait]
 impl OllyllmService for OllyllmRpcDefinition {
-    async fn queue_test(
-        &self,
-        _request: tonic::Request<TestExecutionRequest>,
-    ) -> Result<tonic::Response<()>, tonic::Status> {
-        println!("Received!");
-        Ok(tonic::Response::new(()))
-    }
     async fn report_span(
         &self,
         _request: tonic::Request<ReportSpanRequest>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
-        println!("Received!");
+        println!("Received spans!");
+        Ok(tonic::Response::new(()))
+    }
+
+    async fn queue_test(
+        &self,
+        request: tonic::Request<TestExecutionRequest>,
+    ) -> Result<tonic::Response<()>, tonic::Status> {
+        println!("Received test execution request!");
+        let message = request.into_inner();
+        // Each element in the Vec is an encoded argument
+        let input_bytes: Vec<Vec<u8>> = message.test_input;
+        for bytes in input_bytes {
+            let json_str = std::str::from_utf8(&bytes);
+            if let Ok(json) = json_str {
+                let raw_json: Result<Box<serde_json::value::RawValue>, serde_json::Error> =
+                    serde_json::from_str(json);
+
+                println!("{:?}", raw_json.unwrap());
+            }
+        }
+
         Ok(tonic::Response::new(()))
     }
 }
