@@ -32,14 +32,14 @@ pub async fn post(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>)
 
     let mut repo = DieselRepository {
         connection: &mut conn,
-        table: db::schema::spans::table,
+        table: db::schema::span::table,
     };
 
     let mut uuid_to_span_id: HashMap<String, i32> = HashMap::new();
 
     fn process_span(
         span: Span,
-        repo: &mut DieselRepository<db::schema::spans::table>,
+        repo: &mut DieselRepository<db::schema::span::table>,
         uuid_to_span_id: &mut HashMap<String, i32>,
     ) {
         // Convert start and end times to chrono::DateTime

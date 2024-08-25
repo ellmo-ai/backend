@@ -1,2 +1,3 @@
-DROP TABLE logs;
-DROP TABLE spans;
+DROP TABLE log;
+DROP TABLE span;
+
