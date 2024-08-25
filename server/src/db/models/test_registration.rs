@@ -1,34 +1,30 @@
 use crate::db::models::repository::{DieselRepository, Repository};
-use crate::db::schema::test_version::dsl::test_version;
+use crate::db::schema::test_registration::dsl::test_registration;
 use diesel::prelude::*;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::db::schema::test_version)]
+#[diesel(table_name = crate::db::schema::test_registration)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[allow(dead_code)]
-pub struct TestVersion {
+pub struct TestRegistration {
     pub id: i32,
-    pub name: String,
-    pub version: String,
+    pub blob_url: String,
+    pub metadata: Option<serde_json::Value>,
     pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub test_registration_id: i32,
 }
 
 #[derive(Insertable, Selectable, Queryable)]
-#[diesel(table_name = crate::db::schema::test_version)]
+#[diesel(table_name = crate::db::schema::test_registration)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct InsertableTestVersion {
-    pub name: String,
-    pub version: String,
+pub struct InsertableTestRegistration {
+    pub blob_url: String,
+    pub metadata: Option<serde_json::Value>,
     pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub test_registration_id: i32,
 }
 
-impl<'a> Repository for DieselRepository<'a, test_version> {
-    type Entity = TestVersion;
-    type InsertableEntity = InsertableTestVersion;
+impl<'a> Repository for DieselRepository<'a, test_registration> {
+    type Entity = TestRegistration;
+    type InsertableEntity = InsertableTestRegistration;
     type Id = i32;
 
     fn find_all(&mut self) -> QueryResult<Vec<Self::Entity>> {
@@ -44,7 +40,7 @@ impl<'a> Repository for DieselRepository<'a, test_version> {
     fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity> {
         diesel::insert_into(self.table)
             .values(entity)
-            .returning(crate::db::schema::test_version::all_columns)
+            .returning(crate::db::schema::test_registration::all_columns)
             .get_result(self.connection)
     }
 

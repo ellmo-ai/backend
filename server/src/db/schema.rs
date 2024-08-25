@@ -25,6 +25,7 @@ diesel::table! {
         id -> Int4,
         blob_url -> Text,
         metadata -> Nullable<Jsonb>,
+        created_at -> Timestamptz,
     }
 }
 
