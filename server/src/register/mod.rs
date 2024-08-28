@@ -38,19 +38,27 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
     let latest_test_registration = repo
         .table
         .order_by(created_at.desc())
-        .first::<TestRegistration>(repo.connection);
+        .first::<TestRegistration>(repo.connection)
+        .optional();
 
     if latest_test_registration.is_err() {
+        println!(
+            "Failed to fetch latest test registration, {}",
+            latest_test_registration.err().unwrap()
+        );
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(()));
     }
 
-    match is_new_registration(latest_test_registration.ok(), &payload.tests) {
+    let latest_test_registration = latest_test_registration.unwrap();
+
+    match is_new_registration(latest_test_registration, &payload.tests) {
         Ok(true) => {
             // Continue with registering the new tests
         }
         Ok(false) => {
             // No new tests to register
             // TODO: return a message
+            println!("No new tests to register");
             return (StatusCode::OK, Json(()));
         }
         Err(e) => {
@@ -101,4 +109,136 @@ fn is_new_registration(
     }
 
     Ok(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn create_test(version: &str, export_name: &str, file_path: &str) -> Test {
+        Test {
+            version: version.to_string(),
+            export_name: export_name.to_string(),
+            file_path: file_path.to_string(),
+        }
+    }
+
+    fn create_test_registration(meta: HashMap<TestId, Vec<Test>>) -> TestRegistration {
+        TestRegistration {
+            id: 1,
+            metadata: serde_json::to_value(meta).unwrap(),
+            blob_url: "https://example.com".to_string(),
+            created_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn test_no_previous_registration() {
+        let tests = HashMap::new();
+        assert!(is_new_registration(None, &tests).unwrap());
+    }
+
+    #[test]
+    fn test_identical_registration() {
+        let mut prev_metadata = HashMap::new();
+        prev_metadata.insert(
+            "test_id".to_string(),
+            vec![create_test("1.0.0", "export_name", "file_path")],
+        );
+
+        let mut tests = HashMap::new();
+        tests.insert(
+            "test_id".to_string(),
+            vec![create_test("1.0.0", "export_name", "file_path")],
+        );
+
+        let prev_registration = Some(create_test_registration(prev_metadata));
+        assert!(!is_new_registration(prev_registration, &tests).unwrap());
+    }
+
+    #[test]
+    fn test_new_test_id() {
+        let prev_metadata = HashMap::new();
+
+        let mut tests = HashMap::new();
+        tests.insert(
+            "new_test_id".to_string(),
+            vec![create_test("1.0.0", "export_name", "file_path")],
+        );
+
+        let prev_registration = Some(create_test_registration(prev_metadata));
+        assert!(is_new_registration(prev_registration, &tests).unwrap());
+    }
+
+    #[test]
+    fn test_new_version() {
+        let mut prev_metadata = HashMap::new();
+        prev_metadata.insert(
+            "test_id".to_string(),
+            vec![create_test("1.0.0", "export_name", "file_path")],
+        );
+
+        let mut tests = HashMap::new();
+        tests.insert(
+            "test_id".to_string(),
+            vec![
+                create_test("1.0.0", "export_name", "file_path"),
+                create_test("1.0.1", "export_name", "file_path"),
+            ],
+        );
+
+        let prev_registration = Some(create_test_registration(prev_metadata));
+        assert!(is_new_registration(prev_registration, &tests).unwrap());
+    }
+
+    #[test]
+    fn test_changed_export_name() {
+        let mut prev_metadata = HashMap::new();
+        prev_metadata.insert(
+            "test_id".to_string(),
+            vec![create_test("1.0.0", "old_export_name", "file_path")],
+        );
+
+        let mut tests = HashMap::new();
+        tests.insert(
+            "test_id".to_string(),
+            vec![create_test("1.0.0", "new_export_name", "file_path")],
+        );
+
+        let prev_registration = Some(create_test_registration(prev_metadata));
+        assert!(is_new_registration(prev_registration, &tests).unwrap());
+    }
+
+    #[test]
+    fn test_changed_file_path() {
+        let mut prev_metadata = HashMap::new();
+        prev_metadata.insert(
+            "test_id".to_string(),
+            vec![create_test("1.0.0", "export_name", "old_file_path")],
+        );
+
+        let mut tests = HashMap::new();
+        tests.insert(
+            "test_id".to_string(),
+            vec![create_test("1.0.0", "export_name", "new_file_path")],
+        );
+
+        let prev_registration = Some(create_test_registration(prev_metadata));
+        assert!(is_new_registration(prev_registration, &tests).unwrap());
+    }
+
+    #[test]
+    fn test_invalid_metadata() {
+        let invalid_metadata = serde_json::json!({"invalid": "data"});
+        let prev_registration = Some(TestRegistration {
+            id: 1,
+            metadata: invalid_metadata,
+            blob_url: "https://example.com".to_string(),
+            created_at: Utc::now(),
+        });
+
+        let tests = HashMap::new();
+        assert!(is_new_registration(prev_registration, &tests).is_err());
+    }
 }
