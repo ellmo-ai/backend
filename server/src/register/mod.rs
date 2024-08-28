@@ -76,52 +76,26 @@ fn is_new_registration(
     prev_registration: Option<TestRegistration>,
     tests: &HashMap<TestId, Vec<Test>>,
 ) -> anyhow::Result<bool> {
-    if prev_registration.is_none() {
-        return Ok(true);
-    }
-    let prev_registration = prev_registration.unwrap();
+    let prev_metadata = match prev_registration {
+        Some(reg) => serde_json::from_value::<HashMap<TestId, Vec<Test>>>(reg.metadata)
+            .map_err(|_| anyhow::anyhow!("Failed to deserialize metadata"))?,
+        None => return Ok(true),
+    };
 
-    // Check the previous test registration to see if the tests are already registered
-    let prev_metadata: Result<HashMap<TestId, Vec<Test>>, _> =
-        serde_json::from_value(prev_registration.metadata);
+    for (test_id, test_versions) in tests {
+        let prev_versions = prev_metadata.get(test_id);
 
-    if prev_metadata.is_err() {
-        return anyhow::Result::Err(anyhow::anyhow!("Failed to deserialize metadata"));
-    }
-    let prev_metadata = prev_metadata.unwrap();
-
-    // We need to check if there are any new tests to register (either new test ids or new
-    // version of existing test ids, or new export names/file paths)
-
-    for (test_name, test_versions) in tests.iter() {
-        let prev_test_versions = prev_metadata.get(test_name);
-        if prev_test_versions.is_none() {
-            // We are seeing a new test id
-            return Ok(true);
+        if prev_versions.is_none() {
+            return Ok(true); // New test ID
         }
 
-        // We have previous registrations for this test id
-        let prev_test_versions = prev_test_versions.unwrap();
-
-        for test_version in test_versions {
-            match prev_test_versions
-                .iter()
-                .find(|x| x.version == test_version.version)
-            {
-                Some(existing_test_version) => {
-                    // We have previous registrations for this test id and version
-                    // Check if the export name and file path are the same
-                    if existing_test_version.export_name != test_version.export_name
-                        || existing_test_version.file_path != test_version.file_path
-                    {
-                        // We are seeing a new export name or file path for an existing test id
-                        return Ok(true);
-                    }
-                }
-                None => {
-                    // We are seeing a new version of an existing test id
-                    return Ok(true);
-                }
+        for test in test_versions {
+            if !prev_versions.unwrap().iter().any(|prev| {
+                prev.version == test.version
+                    && prev.export_name == test.export_name
+                    && prev.file_path == test.file_path
+            }) {
+                return Ok(true); // New version or changed export name/file path
             }
         }
     }
