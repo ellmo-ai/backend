@@ -15,11 +15,11 @@ use rpc::RpcServer;
 
 #[tokio::main]
 async fn main() {
-    tokio::task::spawn_blocking(|| async {
+    tokio::task::spawn(async {
         let app = Router::new()
             .route("/", get(root))
             .route("/api/v1/tracing", post(tracing::post))
-            .route("/register/test", post(register::test_post))
+            .route("/api/v1/test/register", post(register::test_post))
             .layer(CorsLayer::permissive());
 
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
