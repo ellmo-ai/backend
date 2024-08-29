@@ -1,16 +1,20 @@
-use crate::db;
-use diesel::prelude::*;
+use std::collections::HashMap;
 
 use axum::response::IntoResponse;
 use axum::{http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde_json::json;
 
-use db::models::{
-    repository::{DieselRepository, Repository},
-    test_registration::{InsertableTestRegistration, TestRegistration},
+use diesel::prelude::*;
+
+use crate::db;
+use db::{
+    models::{
+        repository::{DieselRepository, Repository},
+        test_registration::{InsertableTestRegistration, TestRegistration},
+    },
+    schema::test_registration::dsl::*,
 };
-use db::schema::test_registration::dsl::*;
 
 type TestId = String;
 
@@ -35,35 +39,37 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
         table: db::schema::test_registration::table,
     };
 
-    let latest_test_registration = repo
+    let prev_test_registration = repo
         .table
         .order_by(created_at.desc())
         .first::<TestRegistration>(repo.connection)
         .optional();
 
-    if latest_test_registration.is_err() {
-        println!(
-            "Failed to fetch latest test registration, {}",
-            latest_test_registration.err().unwrap()
+    if let Err(e) = prev_test_registration {
+        let error_message = format!("Failed to fetch latest test registration: {}", e);
+        println!("{}", error_message);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": error_message })),
         );
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(()));
     }
 
-    let latest_test_registration = latest_test_registration.unwrap();
-
-    match is_new_registration(latest_test_registration, &payload.tests) {
+    match is_new_registration(prev_test_registration.unwrap(), &payload.tests) {
         Ok(true) => {
             // Continue with registering the new tests
         }
         Ok(false) => {
-            // No new tests to register
-            // TODO: return a message
-            println!("No new tests to register");
-            return (StatusCode::OK, Json(()));
+            let message = "No new tests to register";
+            println!("{}", message);
+            return (StatusCode::OK, Json(json!({ "message": message })));
         }
         Err(e) => {
-            println!("Failed checking registration, {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(()));
+            let error_message = format!("Failed checking registration: {}", e);
+            println!("{}", error_message);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": error_message })),
+            );
         }
     }
 
@@ -73,11 +79,18 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
         created_at: chrono::Utc::now(),
     });
 
-    if res.is_err() {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(()));
+    if let Err(e) = res {
+        let error_message = format!("Failed to create test registration: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": error_message })),
+        );
     }
 
-    (StatusCode::OK, Json(()))
+    (
+        StatusCode::OK,
+        Json(json!({ "message": "Test registration created successfully" })),
+    )
 }
 
 fn is_new_registration(
