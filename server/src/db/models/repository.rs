@@ -12,7 +12,10 @@ pub trait Repository {
     fn delete(&mut self, id: Self::Id) -> QueryResult<()>;
 }
 
-pub struct DieselRepository<'a, T> {
+pub struct DieselRepository<'a, T>
+where
+    T: diesel::Table,
+{
     pub connection: &'a mut diesel::PgConnection,
     pub table: T,
 }

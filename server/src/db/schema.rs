@@ -1,7 +1,7 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    logs (id) {
+    log (id) {
         id -> Int4,
         ts -> Timestamptz,
         message -> Text,
@@ -10,7 +10,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    spans (id) {
+    span (id) {
         id -> Int4,
         ts_start -> Timestamptz,
         ts_end -> Timestamptz,
@@ -20,6 +20,27 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(logs -> spans (span_id));
+diesel::table! {
+    test_registration (id) {
+        id -> Int4,
+        blob_url -> Text,
+        metadata -> Jsonb,
+        created_at -> Timestamptz,
+    }
+}
 
-diesel::allow_tables_to_appear_in_same_query!(logs, spans,);
+diesel::table! {
+    test_version (id) {
+        id -> Int4,
+        name -> Text,
+        version -> Text,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        test_registration_id -> Int4,
+    }
+}
+
+diesel::joinable!(log -> span (span_id));
+diesel::joinable!(test_version -> test_registration (test_registration_id));
+
+diesel::allow_tables_to_appear_in_same_query!(log, span, test_registration, test_version,);

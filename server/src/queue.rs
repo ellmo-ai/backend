@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use lazy_static::lazy_static;
 use std::sync::Mutex;

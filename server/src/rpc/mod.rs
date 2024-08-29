@@ -24,6 +24,7 @@ impl OllyllmService for OllyllmRpcDefinition {
         request: tonic::Request<TestExecutionRequest>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
         println!("Received test execution request!");
+
         let message = request.into_inner();
         // Each element in the Vec is an encoded argument
         let input_bytes: Vec<Vec<u8>> = message.test_input;

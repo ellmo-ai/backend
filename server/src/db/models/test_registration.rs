@@ -1,0 +1,52 @@
+use crate::db::models::repository::{DieselRepository, Repository};
+use crate::db::schema::test_registration::dsl::test_registration;
+use diesel::prelude::*;
+
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = crate::db::schema::test_registration)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[allow(dead_code)]
+pub struct TestRegistration {
+    pub id: i32,
+    pub blob_url: String,
+    pub metadata: serde_json::Value,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Insertable, Selectable, Queryable)]
+#[diesel(table_name = crate::db::schema::test_registration)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct InsertableTestRegistration {
+    pub blob_url: String,
+    pub metadata: serde_json::Value,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl<'a> Repository for DieselRepository<'a, test_registration> {
+    type Entity = TestRegistration;
+    type InsertableEntity = InsertableTestRegistration;
+    type Id = i32;
+
+    fn find_all(&mut self) -> QueryResult<Vec<Self::Entity>> {
+        self.table.load::<Self::Entity>(self.connection)
+    }
+
+    fn find_by_id(&mut self, id: Self::Id) -> QueryResult<Self::Entity> {
+        self.table
+            .find(id)
+            .get_result::<Self::Entity>(self.connection)
+    }
+
+    fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity> {
+        diesel::insert_into(self.table)
+            .values(entity)
+            .returning(crate::db::schema::test_registration::all_columns)
+            .get_result(self.connection)
+    }
+
+    fn delete(&mut self, id: Self::Id) -> QueryResult<()> {
+        diesel::delete(self.table.find(id))
+            .execute(self.connection)
+            .map(|_| ())
+    }
+}
