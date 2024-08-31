@@ -1,9 +1,13 @@
 name: Build and Test
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   build-test-lint:
@@ -25,17 +29,17 @@ jobs:
       - name: Install protoc
         uses: arduino/setup-protoc@v3
         with:
-          github_token: ${{ secrets.SYNC_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup buf
         uses: bufbuild/buf-setup-action@v1.34.0
         with:
-          github_token: ${{ secrets.SYNC_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check
-        run: cargo check
+      - name: Check and Build
+        run: cargo build
 
-      - name: Build and run tests
+      - name: Run tests
         run: cargo test
 
       - name: Clippy
