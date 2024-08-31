@@ -2,72 +2,49 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build-test-lint:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ./
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        components: rustfmt, clippy
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
 
-    - name: Install Protoc
-      uses: arduino/setup-protoc@v3
-      with:
-        github_token: ${{ secrets.SYNC_TOKEN }}
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
-    - name: Setup buf
-      uses: bufbuild/buf-setup-action@v1.34.0
-      with:
-        github_token: ${{ secrets.SYNC_TOKEN }}
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Cache Cargo registry
-      uses: actions/cache@v2
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-registry-
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@v1.34.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Cache Cargo index
-      uses: actions/cache@v2
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-index-
+      - name: Check and Build
+        run: cargo build
 
-    - name: Cache Cargo build
-      uses: actions/cache@v2
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-build-
+      - name: Run tests
+        run: cargo test
 
-    - name: Build
-      run: cargo build --verbose
+      - name: Clippy
+        run: cargo clippy -- -D warnings
 
-    - name: Run tests
-      run: cargo test --verbose
-
-    - name: Run Clippy
-      run: cargo clippy -- -D warnings
-
-    - name: Run Rustfmt
-      run: cargo fmt -- --check
+      - name: Format check
+        run: cargo fmt -- --check
 

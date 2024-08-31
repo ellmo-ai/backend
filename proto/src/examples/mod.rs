@@ -25,7 +25,7 @@ mod tests {
         let (tx, rx): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel();
 
         let server_handle: JoinHandle<()> = tokio::spawn(async move {
-            let server: DummyRpcServer = DummyRpcServer::new(addr.clone()).await;
+            let server: DummyRpcServer = DummyRpcServer::new(addr).await;
 
             tx.send(()).unwrap();
             server.serve().await.unwrap();
@@ -48,7 +48,7 @@ mod tests {
         let (tx, rx): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel();
 
         let server_handle: JoinHandle<()> = tokio::spawn(async move {
-            let server: DummyRpcServer = DummyRpcServer::new(addr.clone()).await;
+            let server: DummyRpcServer = DummyRpcServer::new(addr).await;
 
             tx.send(()).unwrap();
             server.serve().await.unwrap();
