@@ -1,113 +1,46 @@
 name: Build and Test
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-env:
-  CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
-
 jobs:
-  check:
+  build-test-lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        components: rustfmt, clippy
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
 
-    - uses: arduino/setup-protoc@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
-    - name: Install buf
-      uses: bufbuild/buf-setup-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          github_token: ${{ secrets.SYNC_TOKEN }}
 
-    - name: Add buf to PATH
-      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@v1.34.0
+        with:
+          github_token: ${{ secrets.SYNC_TOKEN }}
 
-    - name: Verify buf installation
-      run: |
-        which buf
-        buf --version
+      - name: Check
+        run: cargo check
 
-    - uses: Swatinem/rust-cache@v2
+      - name: Build and run tests
+        run: cargo test
 
-    - name: Check formatting
-      run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy -- -D warnings
 
-    - name: Run clippy
-      run: cargo clippy --all-targets --all-features
-
-  test:
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-
-    - name: Install buf
-      uses: bufbuild/buf-setup-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Add buf to PATH
-      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Verify buf installation
-      run: |
-        which buf
-        buf --version
-    - uses: Swatinem/rust-cache@v2
-
-    - name: Run tests
-      run: cargo test --all-features
-
-    - name: Debug - List proto directory
-      if: failure()
-      run: ls -R proto
-
-  build:
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-
-    - name: Install buf
-      uses: bufbuild/buf-setup-action@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Add buf to PATH
-      run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Verify buf installation
-      run: |
-        which buf
-        buf --version
-    - uses: Swatinem/rust-cache@v2
-
-    - name: Build
-      run: cargo build --release --all-features
-
-    - name: Debug - List proto directory
-      if: failure()
-      run: ls -R proto
+      - name: Format check
+        run: cargo fmt -- --check
 
