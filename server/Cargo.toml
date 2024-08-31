@@ -8,14 +8,23 @@ default-run = "server"
 # Local
 olly_proto = { package = "proto", path = "../proto" }
 
+# Proto
 tonic = { version= "0.12.0", features = ["prost"] }
 prost-types = "0.13"
 
+anyhow = "1.0.86"
+async-trait = "0.1.80"
+aws-config = { version = "1.1.7", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1.47.0"
 axum = "0.7.5"
 chrono = "0.4.38"
+crossbeam-channel = "0.5.13"
+data-url = "0.3.1"
 deno_core = "0.289.0"
 diesel = { version = "2.2.0", features = ["postgres", "chrono", "serde_json", "uuid"] }
 dotenvy = "0.15"
+lazy_static = "1.4.0"
+reqwest = "0.12.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.68"
 swc = "0.278.0"
@@ -28,9 +37,4 @@ tower-http = { version = "0.5.2", features = ["cors"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.8.0", features = ["v4"] }
-async-trait = "0.1.80"
-reqwest = "0.12.4"
-data-url = "0.3.1"
-lazy_static = "1.4.0"
-crossbeam-channel = "0.5.13"
-anyhow = "1.0.86"
+

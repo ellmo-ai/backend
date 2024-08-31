@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+use aws_sdk_s3 as s3;
+use aws_sdk_s3::presigning::PresigningConfig;
+
 use axum::response::IntoResponse;
 use axum::{http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
@@ -31,6 +34,8 @@ struct Test {
     export_name: String,
     file_path: String,
 }
+
+const BUCKET: &str = "test-registrations";
 
 pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl IntoResponse {
     let mut conn = db::establish_connection();
@@ -73,9 +78,21 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
         }
     }
 
+    let url = match get_presign_url().await {
+        Ok(req) => req.uri().to_string(),
+        Err(e) => {
+            let error_message = format!("Failed to get presign URL: {}", e);
+            println!("{}", error_message);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": error_message })),
+            );
+        }
+    };
+
     let res = repo.create(&InsertableTestRegistration {
         metadata: serde_json::to_value(&payload.tests).unwrap(),
-        blob_url: "https://example.com".to_string(),
+        blob_url: url.clone(),
         created_at: chrono::Utc::now(),
     });
 
@@ -87,10 +104,27 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
         );
     }
 
-    (
-        StatusCode::OK,
-        Json(json!({ "message": "Test registration created successfully" })),
-    )
+    (StatusCode::OK, Json(json!({ "uploadUrl": url })))
+}
+
+async fn get_presign_url() -> anyhow::Result<s3::presigning::PresignedRequest> {
+    let config = aws_config::load_from_env().await;
+    let client = s3::Client::new(&config);
+
+    let key = uuid::Uuid::new_v4().to_string();
+
+    let presign_config = PresigningConfig::expires_in(std::time::Duration::from_secs(3600))
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    let presigned_request = client
+        .put_object()
+        .bucket(BUCKET)
+        .key(key)
+        .presigned(presign_config)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    Ok(presigned_request)
 }
 
 fn is_new_registration(
