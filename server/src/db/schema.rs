@@ -24,6 +24,7 @@ diesel::table! {
     test_registration (id) {
         id -> Int4,
         blob_url -> Text,
+        hash -> Text,
         metadata -> Jsonb,
         created_at -> Timestamptz,
     }

@@ -25,6 +25,7 @@ type TestId = String;
 #[serde(rename_all = "camelCase")]
 pub struct RegisterTestPayload {
     tests: HashMap<TestId, Vec<Test>>,
+    hash: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -59,7 +60,11 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
         );
     }
 
-    match is_new_registration(prev_test_registration.unwrap(), &payload.tests) {
+    match is_new_registration(
+        prev_test_registration.unwrap(),
+        &payload.tests,
+        &payload.hash,
+    ) {
         Ok(true) => {
             // Continue with registering the new tests
         }
@@ -92,6 +97,7 @@ pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl I
 
     let res = repo.create(&InsertableTestRegistration {
         metadata: serde_json::to_value(&payload.tests).unwrap(),
+        hash: payload.hash.clone(),
         blob_url: url.clone(),
         created_at: chrono::Utc::now(),
     });
@@ -130,10 +136,17 @@ async fn get_presign_url() -> anyhow::Result<s3::presigning::PresignedRequest> {
 fn is_new_registration(
     prev_registration: Option<TestRegistration>,
     tests: &HashMap<TestId, Vec<Test>>,
+    new_hash: &str,
 ) -> anyhow::Result<bool> {
     let prev_metadata = match prev_registration {
-        Some(reg) => serde_json::from_value::<HashMap<TestId, Vec<Test>>>(reg.metadata)
-            .map_err(|_| anyhow::anyhow!("Failed to deserialize metadata"))?,
+        Some(reg) => {
+            if reg.hash != new_hash {
+                return Ok(true); // New package.json hash
+            }
+
+            serde_json::from_value::<HashMap<TestId, Vec<Test>>>(reg.metadata)
+                .map_err(|_| anyhow::anyhow!("Failed to deserialize metadata"))?
+        }
         None => return Ok(true),
     };
 
@@ -175,6 +188,7 @@ mod tests {
         TestRegistration {
             id: 1,
             metadata: serde_json::to_value(meta).unwrap(),
+            hash: "".to_string(),
             blob_url: "https://example.com".to_string(),
             created_at: Utc::now(),
         }
@@ -183,7 +197,7 @@ mod tests {
     #[test]
     fn test_no_previous_registration() {
         let tests = HashMap::new();
-        assert!(is_new_registration(None, &tests).unwrap());
+        assert!(is_new_registration(None, &tests, "").unwrap());
     }
 
     #[test]
@@ -201,7 +215,7 @@ mod tests {
         );
 
         let prev_registration = Some(create_test_registration(prev_metadata));
-        assert!(!is_new_registration(prev_registration, &tests).unwrap());
+        assert!(!is_new_registration(prev_registration, &tests, "").unwrap());
     }
 
     #[test]
@@ -215,7 +229,7 @@ mod tests {
         );
 
         let prev_registration = Some(create_test_registration(prev_metadata));
-        assert!(is_new_registration(prev_registration, &tests).unwrap());
+        assert!(is_new_registration(prev_registration, &tests, "").unwrap());
     }
 
     #[test]
@@ -236,7 +250,7 @@ mod tests {
         );
 
         let prev_registration = Some(create_test_registration(prev_metadata));
-        assert!(is_new_registration(prev_registration, &tests).unwrap());
+        assert!(is_new_registration(prev_registration, &tests, "").unwrap());
     }
 
     #[test]
@@ -254,7 +268,7 @@ mod tests {
         );
 
         let prev_registration = Some(create_test_registration(prev_metadata));
-        assert!(is_new_registration(prev_registration, &tests).unwrap());
+        assert!(is_new_registration(prev_registration, &tests, "").unwrap());
     }
 
     #[test]
@@ -272,7 +286,7 @@ mod tests {
         );
 
         let prev_registration = Some(create_test_registration(prev_metadata));
-        assert!(is_new_registration(prev_registration, &tests).unwrap());
+        assert!(is_new_registration(prev_registration, &tests, "").unwrap());
     }
 
     #[test]
@@ -280,12 +294,13 @@ mod tests {
         let invalid_metadata = serde_json::json!({"invalid": "data"});
         let prev_registration = Some(TestRegistration {
             id: 1,
+            hash: "".to_string(),
             metadata: invalid_metadata,
             blob_url: "https://example.com".to_string(),
             created_at: Utc::now(),
         });
 
         let tests = HashMap::new();
-        assert!(is_new_registration(prev_registration, &tests).is_err());
+        assert!(is_new_registration(prev_registration, &tests, "").is_err());
     }
 }

@@ -9,6 +9,7 @@ use diesel::prelude::*;
 pub struct TestRegistration {
     pub id: i32,
     pub blob_url: String,
+    pub hash: String,
     pub metadata: serde_json::Value,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
@@ -19,6 +20,7 @@ pub struct TestRegistration {
 pub struct InsertableTestRegistration {
     pub blob_url: String,
     pub metadata: serde_json::Value,
+    pub hash: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
