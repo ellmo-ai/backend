@@ -1,6 +1,4 @@
 pub mod db;
-pub mod exec;
+pub mod queue;
 pub mod register;
 pub mod tracing;
-
-pub mod queue;
