@@ -1,4 +1,3 @@
-mod db;
 mod queue;
 mod register;
 mod rpc;

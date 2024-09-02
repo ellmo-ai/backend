@@ -10,8 +10,7 @@ use serde_json::json;
 
 use diesel::prelude::*;
 
-use crate::db;
-use db::{
+use olly_db::{
     models::{
         repository::{DieselRepository, Repository},
         test_registration::{InsertableTestRegistration, TestRegistration},
@@ -39,10 +38,10 @@ struct Test {
 const BUCKET: &str = "test-registrations";
 
 pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl IntoResponse {
-    let mut conn = db::establish_connection();
+    let mut conn = olly_db::establish_connection();
     let mut repo = DieselRepository {
         connection: &mut conn,
-        table: db::schema::test_registration::table,
+        table: olly_db::schema::test_registration::table,
     };
 
     let prev_test_registration = repo
