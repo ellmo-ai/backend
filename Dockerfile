@@ -18,6 +18,7 @@ RUN curl -sSL \
 
 # Copy the proto crate
 COPY ./proto ./proto
+COPY ./db ./db
 
 # Set working directory to the server crate
 WORKDIR /app/server
