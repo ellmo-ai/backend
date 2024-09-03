@@ -27,8 +27,8 @@ async fn main() {
     });
 
     let addr: core::net::SocketAddr = "[::1]:50051".parse().unwrap();
-    let server: RpcServer = RpcServer::new(addr);
     println!("gRPC listening on {}", addr);
+    let server = RpcServer::new(addr);
     server.serve().await.unwrap();
 }
 

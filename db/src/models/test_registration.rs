@@ -1,6 +1,9 @@
+use diesel::prelude::*;
+use serde::Deserialize;
+use std::collections::HashMap;
+
 use crate::models::repository::{DieselRepository, Repository};
 use crate::schema::test_registration::dsl::test_registration;
-use diesel::prelude::*;
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::test_registration)]
@@ -12,6 +15,18 @@ pub struct TestRegistration {
     pub hash: String,
     pub metadata: serde_json::Value,
     pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+type TestId = String;
+
+pub type Metadata = HashMap<TestId, Vec<Test>>;
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Test {
+    pub version: String,
+    pub export_name: String,
+    pub file_path: String,
 }
 
 #[derive(Insertable, Selectable, Queryable)]

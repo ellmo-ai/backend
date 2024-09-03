@@ -54,16 +54,16 @@ impl EllmoService for EllmoRpcDefinition {
         });
 
         let client = reqwest::Client::new();
-        let res = client
+        let _res = client
             .post("http://0.0.0.0:3001/execute")
             .json(&payload)
             .send()
             .await;
 
-        match res {
-            Ok(data) => println!("Success: {:?}", data),
-            Err(e) => eprintln!("Error: {}", e),
-        }
+        // match res {
+        //     Ok(data) => println!("Success: {:?}", data),
+        //     Err(e) => eprintln!("Error: {}", e),
+        // }
 
         Ok(Response::new(()))
     }
@@ -81,7 +81,7 @@ pub struct RpcServer {
 }
 
 impl RpcServer {
-    pub async fn new(addr: core::net::SocketAddr) -> Self {
+    pub fn new(addr: core::net::SocketAddr) -> Self {
         let ellmo: EllmoRpcDefinition = EllmoRpcDefinition::default();
         let server = transport::Server::builder()
             .add_service(EllmoServiceServer::new(ellmo))
