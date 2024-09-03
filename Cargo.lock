@@ -962,6 +962,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "exec"
+version = "0.1.0"
+dependencies = [
+ "aws-config",
+ "aws-sdk-s3",
+ "aws-smithy-types",
+ "axum",
+ "db",
+ "diesel",
+ "serde",
+ "tokio",
+ "tower-http",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
