@@ -28,7 +28,6 @@ impl EllmoService for EllmoRpcDefinition {
         &self,
         request: Request<TestExecutionRequest>,
     ) -> Result<Response<()>, Status> {
-        println!("Received test execution request!");
         let message = request.into_inner();
 
         let input = message
@@ -50,22 +49,31 @@ impl EllmoService for EllmoRpcDefinition {
                 "name": test.name,
                 "version": test.version
             },
-            "input": input
+            "input": input, // serde_json::to_string(&input).map_err(|_| Status::internal("Failed to serialize input"))?
         });
 
+        println!(
+            "Forwarding test execution request to test runner, {} {}",
+            test.name, test.version
+        );
+
         let client = reqwest::Client::new();
-        let _res = client
+        let res = client
             .post("http://0.0.0.0:3001/execute")
             .json(&payload)
             .send()
             .await;
 
-        // match res {
-        //     Ok(data) => println!("Success: {:?}", data),
-        //     Err(e) => eprintln!("Error: {}", e),
-        // }
-
-        Ok(Response::new(()))
+        return match res {
+            Ok(res) => {
+                if res.status().is_success() {
+                    Ok(Response::new(()))
+                } else {
+                    Err(Status::internal("Failed to execute test"))
+                }
+            }
+            Err(_e) => Err(Status::internal("Failed to execute test")),
+        };
     }
 
     async fn record_eval(

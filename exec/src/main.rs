@@ -63,7 +63,7 @@ struct Test {
 #[serde(rename_all = "camelCase")]
 struct ExecuteRequestPayload {
     test: Test,
-    input: String,
+    input: serde_json::Value,
 }
 
 async fn execute(
@@ -88,6 +88,7 @@ async fn execute(
         .first::<TestRegistration>(repo.connection)
         .optional()
         .map_err(|e| {
+            println!("Failed to fetch latest test registration: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to fetch latest test registration: {}", e),
@@ -105,14 +106,11 @@ async fn execute(
         )
     })?;
 
-    println!("Object key: {}", key);
-
-    let file_path = format!("/tmp/{}", &key);
+    let file_path = format!("/tmp/olly-{}", &key);
 
     // Only download the file if it doesn't exist
     if !std::path::Path::new(&file_path).exists() {
-        println!("Downloading file from S3");
-
+        #[allow(deprecated)]
         let config = aws_config::load_from_env().await;
         let client = s3::Client::new(&config);
 
@@ -129,8 +127,6 @@ async fn execute(
                 )
             })?;
 
-        println!("Writing file to disk");
-
         write_to_file(response.body, &file_path)
             .await
             .map_err(|e| {
@@ -139,8 +135,6 @@ async fn execute(
                     format!("Failed to write to file: {}", e),
                 )
             })?;
-    } else {
-        println!("File already exists, skipping download");
     }
 
     execute_test(payload, "/tmp/extracted", test_registration).map_err(|e| {
@@ -194,7 +188,7 @@ fn extract_tar_gz(tar_gz_path: &str, output_dir: &str) -> std::io::Result<()> {
 
 fn execute_test(
     request: ExecuteRequestPayload,
-    path: &str,
+    root_path: &str,
     registration: TestRegistration,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let test = request.test;
@@ -208,8 +202,42 @@ fn execute_test(
         .find(|t| t.version == test.version)
         .ok_or("Test version not found")?;
 
-    let file_path = format!("{}/{}", path, test.file_path);
-    println!("Executing test {} at path {}", test.export_name, file_path);
+    // Run npm install
+    let status = std::process::Command::new("sh")
+        .arg("-c")
+        .arg("npm install && npm install @ollyllm/ts-sdk@latest")
+        .current_dir(root_path)
+        // ignore stdout
+        .stdout(std::process::Stdio::null())
+        .status()?;
+
+    if !status.success() {
+        return Err("Failed to run npm install".into());
+    }
+
+    let input = request.input;
+
+    // e.g. npx @ollyllm/ts-sdk execute --path ./tests/simple/noUUID.olly.ts --test noUUID '"hi"'
+    let output = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(format!(
+            "npx @ollyllm/ts-sdk execute --path ./{} --test {} {}",
+            test.file_path, test.export_name, input
+        ))
+        .stdout(std::process::Stdio::piped()) // Capture stdout
+        .stderr(std::process::Stdio::piped()) // Capture stderr
+        .current_dir(root_path)
+        .output()?;
+
+    let stdout = String::from_utf8(output.stdout)?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if output.status.success() {
+        println!("Command succeeded with output:\n{}", stdout);
+    } else {
+        println!("Command failed with status: {}", output.status);
+        println!("Error output:\n{}", stderr);
+    }
 
     Ok(())
 }
