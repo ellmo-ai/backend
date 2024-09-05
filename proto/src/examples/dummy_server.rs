@@ -6,7 +6,9 @@ use std::pin::Pin;
 use tonic::transport;
 
 use crate::ollyllm::ollyllm_service_server::{OllyllmService, OllyllmServiceServer};
-use crate::ollyllm::{ReportSpanRequest, TestExecutionRequest};
+use crate::ollyllm::{
+    EvalResult, RecordEvalRequest, RecordEvalResponse, ReportSpanRequest, TestExecutionRequest,
+};
 
 #[derive(Default)]
 struct OllyllmRpcDefinition {}
@@ -26,6 +28,16 @@ impl OllyllmService for OllyllmRpcDefinition {
     ) -> Result<tonic::Response<()>, tonic::Status> {
         println!("Received!");
         Ok(tonic::Response::new(()))
+    }
+    async fn record_eval(
+        &self,
+        _request: tonic::Request<RecordEvalRequest>,
+    ) -> Result<tonic::Response<RecordEvalResponse>, tonic::Status> {
+        println!("Received!");
+        Ok(tonic::Response::new(RecordEvalResponse {
+            result: EvalResult::Unknown.into(),
+            previous_eval_results: [].to_vec(),
+        }))
     }
 }
 

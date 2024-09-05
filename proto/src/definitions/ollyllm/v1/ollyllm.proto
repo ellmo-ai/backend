@@ -5,8 +5,10 @@ package ollyllm.v1;
 import "google/protobuf/empty.proto";
 import "ollyllm/v1/span.proto";
 import "ollyllm/v1/test.proto";
+import "ollyllm/v1/eval.proto";
 
 service OllyllmService {
   rpc QueueTest(TestExecutionRequest) returns (google.protobuf.Empty) {}
   rpc ReportSpan(ReportSpanRequest) returns (google.protobuf.Empty) {}
+  rpc RecordEval(RecordEvalRequest) returns (RecordEvalResponse) {}
 }
