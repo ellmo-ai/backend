@@ -10,20 +10,15 @@ message VersionedEval {
   string version = 2; // SemVer of test
 }
 
-message SingleEvalResult {
-    oneof SingleEvalResultOneOf {
-        bool error = 1; // Whether the eval errored
-
-        int64 score = 2; // Eval score
-        float percentage = 3; // Eval percentage
-        bool result = 4; // Eval result
-    }
+message EvalScore {
+    string eval_hash = 1; // Hash of the eval input/expected
+    float score = 2; // Score of the eval
 }
 
 /*  RecordEvalRequest represents a request to record an eval run. */
 message RecordEvalRequest {
   VersionedEval versioned_eval = 1; // Unique eval
-  repeated SingleEvalResult eval_results = 2; // List of eval results
+  repeated EvalScore eval_results = 2; // List of eval results
 }
 
 enum EvalResult {
@@ -34,6 +29,7 @@ enum EvalResult {
 
 message RecordEvalResponse {
     EvalResult result = 1;
-    repeated SingleEvalResult previous_eval_results = 2;
+    repeated EvalScore previous_eval_scores = 2;
+    string message = 3;
 }
 

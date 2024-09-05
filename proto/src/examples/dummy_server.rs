@@ -36,7 +36,8 @@ impl OllyllmService for OllyllmRpcDefinition {
         println!("Received!");
         Ok(tonic::Response::new(RecordEvalResponse {
             result: EvalResult::Unknown.into(),
-            previous_eval_results: [].to_vec(),
+            previous_eval_scores: [].to_vec(),
+            message: "".to_string(),
         }))
     }
 }
