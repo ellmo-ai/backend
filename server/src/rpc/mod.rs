@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -124,19 +125,85 @@ impl OllyllmService for OllyllmRpcDefinition {
             let previous_results: EvalRunScores =
                 serde_json::from_value(previous_result.scores).unwrap();
 
-            compare_results(previous_results, scores);
-        }
+            let result = compare_results(previous_results, scores);
 
-        Ok(tonic::Response::new(RecordEvalResponse {
-            outcome: EvalOutcome::Unknown.into(),
-            previous_eval_scores: [].to_vec(),
-            message: "Success".to_string(),
-        }))
+            Ok(tonic::Response::new(RecordEvalResponse {
+                outcome: result.into(),
+                previous_eval_scores: [].to_vec(),
+                message: "Success".to_string(),
+            }))
+        } else {
+            Ok(tonic::Response::new(RecordEvalResponse {
+                outcome: EvalOutcome::Improvement.into(),
+                previous_eval_scores: [].to_vec(),
+                message: "Success".to_string(),
+            }))
+        }
     }
 }
 
-fn compare_results(_previous: EvalRunScores, _current: EvalRunScores) -> EvalOutcome {
-    EvalOutcome::Unknown
+fn compare_results(previous: EvalRunScores, current: EvalRunScores) -> EvalOutcome {
+    const INDIVIDUAL_THRESHOLD: f32 = 0.1;
+    const MEAN_THRESHOLD: f32 = 0.01;
+    const CONSISTENCY_THRESHOLD: f32 = 0.7;
+
+    // Group scores by eval_hash (same eval input/expected)
+    let mut grouped_scores: HashMap<String, Vec<f32>> = HashMap::new();
+    for score in previous.into_iter().chain(current.into_iter()) {
+        grouped_scores
+            .entry(score.eval_hash)
+            .or_default()
+            .push(score.score);
+    }
+
+    // Calculate differences for groups with a before and after score
+    let differences: Vec<f32> = grouped_scores
+        .values()
+        .filter(|scores| scores.len() == 2)
+        .map(|scores| scores[1] - scores[0])
+        .collect();
+
+    if differences.is_empty() {
+        return EvalOutcome::Unknown;
+    }
+
+    println!("{:?}", differences);
+
+    // Analyze the differences
+    let total_diff: f32 = differences.iter().sum();
+    let mean_diff = total_diff / differences.len() as f32;
+    let num_positive = differences.iter().filter(|&&d| d > 0.0).count();
+    let num_negative = differences.iter().filter(|&&d| d < 0.0).count();
+
+    // Count significant changes
+    let significant_positives = differences
+        .iter()
+        .filter(|&&d| d > INDIVIDUAL_THRESHOLD)
+        .count();
+    let significant_negatives = differences
+        .iter()
+        .filter(|&&d| d < -INDIVIDUAL_THRESHOLD)
+        .count();
+
+    // Determine if there's a meaningful change
+    if significant_positives > 0 || significant_negatives > 0 {
+        match significant_positives.cmp(&significant_negatives) {
+            std::cmp::Ordering::Greater => EvalOutcome::Improvement,
+            std::cmp::Ordering::Less => EvalOutcome::Regression,
+            std::cmp::Ordering::Equal => EvalOutcome::Unknown,
+        }
+    } else if mean_diff.abs() > MEAN_THRESHOLD {
+        let total = differences.len() as f32;
+        if (num_positive as f32 / total) > CONSISTENCY_THRESHOLD {
+            EvalOutcome::Improvement
+        } else if (num_negative as f32 / total) > CONSISTENCY_THRESHOLD {
+            EvalOutcome::Regression
+        } else {
+            EvalOutcome::Unknown
+        }
+    } else {
+        EvalOutcome::NoChange
+    }
 }
 
 pub struct RpcServer {

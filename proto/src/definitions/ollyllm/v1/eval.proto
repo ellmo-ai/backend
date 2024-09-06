@@ -24,7 +24,8 @@ message RecordEvalRequest {
 enum EvalOutcome {
     IMPROVEMENT = 0;
     REGRESSION = 1;
-    UNKNOWN = 2;
+    NO_CHANGE = 3;
+    UNKNOWN = 4;
 }
 
 message RecordEvalResponse {
