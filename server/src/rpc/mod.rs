@@ -72,7 +72,10 @@ impl OllyllmService for OllyllmRpcDefinition {
             .order_by(eval_version::created_at.desc())
             .first::<EvalVersion>(repo.connection)
             .optional()
-            .map_err(|_| tonic::Status::internal("Failed to fetch latest test registration"))?;
+            .map_err(|e| {
+                println!("{}", e);
+                tonic::Status::internal("Failed to fetch eval version")
+            })?;
 
         let existing_eval_version = match existing_eval_version {
             Some(v) => v,
@@ -98,6 +101,7 @@ impl OllyllmService for OllyllmRpcDefinition {
             .table
             .order_by(eval_result::created_at.desc())
             .first::<EvalResult>(repo.connection)
+            .optional()
             .map_err(|_| tonic::Status::internal("Failed to fetch latest test registration"))?;
 
         let scores: EvalRunScores = eval_scores
@@ -116,10 +120,12 @@ impl OllyllmService for OllyllmRpcDefinition {
             })
             .map_err(|_| tonic::Status::internal("Failed to create new eval result"))?;
 
-        let previous_results: EvalRunScores =
-            serde_json::from_value(previous_eval_result.scores).unwrap();
+        if let Some(previous_result) = previous_eval_result {
+            let previous_results: EvalRunScores =
+                serde_json::from_value(previous_result.scores).unwrap();
 
-        compare_results(previous_results, scores);
+            compare_results(previous_results, scores);
+        }
 
         Ok(tonic::Response::new(RecordEvalResponse {
             outcome: EvalOutcome::Unknown.into(),
