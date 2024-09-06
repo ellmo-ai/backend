@@ -18,17 +18,17 @@ message EvalScore {
 /*  RecordEvalRequest represents a request to record an eval run. */
 message RecordEvalRequest {
   VersionedEval versioned_eval = 1; // Unique eval
-  repeated EvalScore eval_results = 2; // List of eval results
+  repeated EvalScore eval_scores = 2; // List of eval scores
 }
 
-enum EvalResult {
+enum EvalOutcome {
     IMPROVEMENT = 0;
     REGRESSION = 1;
     UNKNOWN = 2;
 }
 
 message RecordEvalResponse {
-    EvalResult result = 1;
+    EvalOutcome outcome = 1;
     repeated EvalScore previous_eval_scores = 2;
     string message = 3;
 }

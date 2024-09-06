@@ -7,7 +7,7 @@ use tonic::transport;
 
 use crate::ollyllm::ollyllm_service_server::{OllyllmService, OllyllmServiceServer};
 use crate::ollyllm::{
-    EvalResult, RecordEvalRequest, RecordEvalResponse, ReportSpanRequest, TestExecutionRequest,
+    EvalOutcome, RecordEvalRequest, RecordEvalResponse, ReportSpanRequest, TestExecutionRequest,
 };
 
 #[derive(Default)]
@@ -35,7 +35,7 @@ impl OllyllmService for OllyllmRpcDefinition {
     ) -> Result<tonic::Response<RecordEvalResponse>, tonic::Status> {
         println!("Received!");
         Ok(tonic::Response::new(RecordEvalResponse {
-            result: EvalResult::Unknown.into(),
+            outcome: EvalOutcome::Unknown.into(),
             previous_eval_scores: [].to_vec(),
             message: "".to_string(),
         }))
