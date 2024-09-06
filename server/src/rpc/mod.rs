@@ -6,7 +6,8 @@ use tonic::transport;
 
 use olly_proto::ollyllm::ollyllm_service_server::{OllyllmService, OllyllmServiceServer};
 use olly_proto::ollyllm::{
-    EvalOutcome, RecordEvalRequest, RecordEvalResponse, ReportSpanRequest, TestExecutionRequest,
+    EvalOutcome, MeaningfulEvalScore, RecordEvalRequest, RecordEvalResponse, ReportSpanRequest,
+    TestExecutionRequest,
 };
 
 use diesel::prelude::*;
@@ -125,75 +126,111 @@ impl OllyllmService for OllyllmRpcDefinition {
             let previous_results: EvalRunScores =
                 serde_json::from_value(previous_result.scores).unwrap();
 
-            let result = compare_results(previous_results, scores);
+            let (result, meaningful_scores) = compare_results(previous_results, scores);
 
             Ok(tonic::Response::new(RecordEvalResponse {
                 outcome: result.into(),
                 previous_eval_scores: [].to_vec(),
+                meaningful_eval_scores: meaningful_scores,
                 message: "Success".to_string(),
             }))
         } else {
             Ok(tonic::Response::new(RecordEvalResponse {
-                outcome: EvalOutcome::Improvement.into(),
+                outcome: EvalOutcome::NoChange.into(),
                 previous_eval_scores: [].to_vec(),
+                meaningful_eval_scores: [].to_vec(),
                 message: "Success".to_string(),
             }))
         }
     }
 }
 
-fn compare_results(previous: EvalRunScores, current: EvalRunScores) -> EvalOutcome {
-    const INDIVIDUAL_THRESHOLD: f32 = 0.1;
-    const MEAN_THRESHOLD: f32 = 0.01;
+fn compare_results(
+    previous: EvalRunScores,
+    current: EvalRunScores,
+) -> (EvalOutcome, Vec<MeaningfulEvalScore>) {
+    const INDIVIDUAL_THRESHOLD: f32 = 0.10; // 10% change
+    const MEAN_THRESHOLD: f32 = 0.01; // 1% change
     const CONSISTENCY_THRESHOLD: f32 = 0.7;
 
-    // Group scores by eval_hash (same eval input/expected)
-    let mut grouped_scores: HashMap<String, Vec<f32>> = HashMap::new();
-    for score in previous.into_iter().chain(current.into_iter()) {
+    let mut grouped_scores: HashMap<String, Vec<(f32, bool)>> = HashMap::new();
+    for score in previous.into_iter() {
         grouped_scores
-            .entry(score.eval_hash)
+            .entry(score.eval_hash.clone())
             .or_default()
-            .push(score.score);
+            .push((score.score, false));
+    }
+    for score in current.into_iter() {
+        grouped_scores
+            .entry(score.eval_hash.clone())
+            .or_default()
+            .push((score.score, true));
     }
 
-    // Calculate differences for groups with a before and after score
-    let differences: Vec<f32> = grouped_scores
-        .values()
-        .filter(|scores| scores.len() == 2)
-        .map(|scores| scores[1] - scores[0])
-        .collect();
+    let mut percent_changes: Vec<f32> = Vec::new();
+    let mut meaningful_changes: Vec<MeaningfulEvalScore> = Vec::new();
 
-    if differences.is_empty() {
-        return EvalOutcome::Unknown;
+    for (eval_hash, scores) in grouped_scores.iter() {
+        if scores.len() == 2 {
+            let previous_score = scores[0].0;
+            let current_score = scores[1].0;
+
+            // Calculate percentage change
+            let percent_change = if previous_score != 0.0 {
+                (current_score - previous_score) / previous_score.abs()
+            } else if current_score != 0.0 {
+                1.0 // If previous was 0 and current is not, consider it a 100% increase
+            } else {
+                0.0 // Both scores are 0, no change
+            };
+
+            percent_changes.push(percent_change);
+
+            let individual_outcome = if percent_change > INDIVIDUAL_THRESHOLD {
+                EvalOutcome::Improvement
+            } else if percent_change < -INDIVIDUAL_THRESHOLD {
+                EvalOutcome::Regression
+            } else {
+                EvalOutcome::NoChange
+            };
+
+            if individual_outcome != EvalOutcome::NoChange {
+                meaningful_changes.push(MeaningfulEvalScore {
+                    eval_hash: eval_hash.clone(),
+                    previous_score,
+                    current_score,
+                    outcome: individual_outcome.into(),
+                });
+            }
+        }
     }
 
-    println!("{:?}", differences);
+    if percent_changes.is_empty() {
+        return (EvalOutcome::Unknown, meaningful_changes);
+    }
 
-    // Analyze the differences
-    let total_diff: f32 = differences.iter().sum();
-    let mean_diff = total_diff / differences.len() as f32;
-    let num_positive = differences.iter().filter(|&&d| d > 0.0).count();
-    let num_negative = differences.iter().filter(|&&d| d < 0.0).count();
+    let total_percent_change: f32 = percent_changes.iter().sum();
+    let mean_percent_change = total_percent_change / percent_changes.len() as f32;
+    let num_positive = percent_changes.iter().filter(|&&c| c > 0.0).count();
+    let num_negative = percent_changes.iter().filter(|&&c| c < 0.0).count();
 
-    // Count significant changes
-    let significant_positives = differences
+    let significant_positives = percent_changes
         .iter()
-        .filter(|&&d| d > INDIVIDUAL_THRESHOLD)
+        .filter(|&&c| c > INDIVIDUAL_THRESHOLD)
         .count();
-    let significant_negatives = differences
+    let significant_negatives = percent_changes
         .iter()
-        .filter(|&&d| d < -INDIVIDUAL_THRESHOLD)
+        .filter(|&&c| c < -INDIVIDUAL_THRESHOLD)
         .count();
 
-    // Determine if there's a meaningful change
-    if significant_positives > 0 || significant_negatives > 0 {
+    let overall_outcome = if significant_positives > 0 || significant_negatives > 0 {
         match significant_positives.cmp(&significant_negatives) {
             std::cmp::Ordering::Greater => EvalOutcome::Improvement,
             std::cmp::Ordering::Less => EvalOutcome::Regression,
             std::cmp::Ordering::Equal => EvalOutcome::Unknown,
         }
-    } else if mean_diff.abs() > MEAN_THRESHOLD {
-        let total = differences.len() as f32;
+    } else if mean_percent_change.abs() > MEAN_THRESHOLD {
+        let total = percent_changes.len() as f32;
         if (num_positive as f32 / total) > CONSISTENCY_THRESHOLD {
             EvalOutcome::Improvement
         } else if (num_negative as f32 / total) > CONSISTENCY_THRESHOLD {
@@ -203,7 +240,9 @@ fn compare_results(previous: EvalRunScores, current: EvalRunScores) -> EvalOutco
         }
     } else {
         EvalOutcome::NoChange
-    }
+    };
+
+    (overall_outcome, meaningful_changes)
 }
 
 pub struct RpcServer {

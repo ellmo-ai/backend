@@ -10,6 +10,7 @@ message VersionedEval {
   string version = 2; // SemVer of test
 }
 
+/*  EvalScore represents a single score of an eval. */
 message EvalScore {
     string eval_hash = 1; // Hash of the eval input/expected
     float score = 2; // Score of the eval
@@ -21,6 +22,7 @@ message RecordEvalRequest {
   repeated EvalScore eval_scores = 2; // List of eval scores
 }
 
+/* EvalOutcome represents the outcome of an eval. */
 enum EvalOutcome {
     IMPROVEMENT = 0;
     REGRESSION = 1;
@@ -28,9 +30,21 @@ enum EvalOutcome {
     UNKNOWN = 4;
 }
 
+/* MeaningfulEvalScore represents a meaningful eval score. */
+message MeaningfulEvalScore {
+    string eval_hash = 1; // Hash of the eval input/expected
+    float previous_score = 2; // Previous score
+    float current_score = 3; // Current score
+
+    EvalOutcome outcome = 4; // Outcome of the eval
+}
+
+/*  RecordEvalResponse represents a response to a record eval request. */
 message RecordEvalResponse {
-    EvalOutcome outcome = 1;
-    repeated EvalScore previous_eval_scores = 2;
-    string message = 3;
+    EvalOutcome outcome = 1; // Outcome of the eval
+    repeated EvalScore previous_eval_scores = 2; // List of previous eval scores
+    repeated MeaningfulEvalScore meaningful_eval_scores = 3; // Analysis of meaningful eval scores
+
+    string message = 4; // Any message to the user
 }
 
