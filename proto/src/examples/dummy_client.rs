@@ -4,16 +4,16 @@ use prost_types::Timestamp;
 use std::net::SocketAddr;
 use tonic::transport::Channel;
 
-use crate::ollyllm::ollyllm_service_client::OllyllmServiceClient;
-use crate::ollyllm::{ReportSpanRequest, Span, TestExecutionRequest, VersionedTest};
+use crate::polay::polay_service_client::PolayServiceClient;
+use crate::polay::{ReportSpanRequest, Span, TestExecutionRequest, VersionedTest};
 
 pub struct DummyClient {
-    client: OllyllmServiceClient<Channel>,
+    client: PolayServiceClient<Channel>,
 }
 
 impl DummyClient {
     pub async fn new(socket_addr: SocketAddr) -> Result<Self, tonic::transport::Error> {
-        let client = OllyllmServiceClient::connect(format!("http://{}", socket_addr)).await?;
+        let client = PolayServiceClient::connect(format!("http://{}", socket_addr)).await?;
         Ok(DummyClient { client })
     }
 

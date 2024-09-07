@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ollyllm.v1;
+package polay.v1;
 
 import "google/protobuf/timestamp.proto";
 
@@ -17,4 +17,3 @@ message TestExecutionRequest {
   repeated bytes test_input = 3; // List of parameters for test
   google.protobuf.Timestamp request_timestamp = 4; // Client request time of test execution
 }
-

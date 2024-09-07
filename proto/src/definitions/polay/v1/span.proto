@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ollyllm.v1;
+package polay.v1;
 
 import "google/protobuf/timestamp.proto";
 

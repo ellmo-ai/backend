@@ -5,16 +5,16 @@ use std::pin::Pin;
 
 use tonic::transport;
 
-use crate::ollyllm::ollyllm_service_server::{OllyllmService, OllyllmServiceServer};
-use crate::ollyllm::{
+use crate::polay::polay_service_server::{PolayService, PolayServiceServer};
+use crate::polay::{
     EvalOutcome, RecordEvalRequest, RecordEvalResponse, ReportSpanRequest, TestExecutionRequest,
 };
 
 #[derive(Default)]
-struct OllyllmRpcDefinition {}
+struct PolayRpcDefinition {}
 
 #[tonic::async_trait]
-impl OllyllmService for OllyllmRpcDefinition {
+impl PolayService for PolayRpcDefinition {
     async fn queue_test(
         &self,
         _request: tonic::Request<TestExecutionRequest>,
@@ -49,9 +49,9 @@ pub struct DummyRpcServer {
 
 impl DummyRpcServer {
     pub async fn new(addr: core::net::SocketAddr) -> Self {
-        let ollyllm: OllyllmRpcDefinition = OllyllmRpcDefinition::default();
+        let polay: PolayRpcDefinition = PolayRpcDefinition::default();
         let server = transport::Server::builder()
-            .add_service(OllyllmServiceServer::new(ollyllm))
+            .add_service(PolayServiceServer::new(polay))
             .serve(addr);
 
         DummyRpcServer {

@@ -1,3 +1,5 @@
 **/target
 **/.env
 **/gen
+
+.DS_Store

@@ -4,25 +4,25 @@ use std::pin::Pin;
 
 use tonic::transport;
 
-use olly_proto::ollyllm::ollyllm_service_server::{OllyllmService, OllyllmServiceServer};
-use olly_proto::ollyllm::{
+use polay_proto::polay::polay_service_server::{PolayService, PolayServiceServer};
+use polay_proto::polay::{
     EvalOutcome, MeaningfulEvalScore, RecordEvalRequest, RecordEvalResponse, ReportSpanRequest,
     TestExecutionRequest,
 };
 
 use diesel::prelude::*;
-use olly_db::models::{
+use polay_db::models::{
     eval_result::{EvalResult, EvalRunScores, InsertableEvalResult, SingleEvalScore},
     eval_version::{EvalVersion, InsertableEvalVersion},
     repository::{DieselRepository, Repository},
 };
-use olly_db::schema::{eval_result, eval_version};
+use polay_db::schema::{eval_result, eval_version};
 
 #[derive(Default)]
-struct OllyllmRpcDefinition {}
+struct PolayRpcDefinition {}
 
 #[tonic::async_trait]
-impl OllyllmService for OllyllmRpcDefinition {
+impl PolayService for PolayRpcDefinition {
     async fn report_span(
         &self,
         _request: tonic::Request<ReportSpanRequest>,
@@ -62,11 +62,11 @@ impl OllyllmService for OllyllmRpcDefinition {
         let versioned_eval = message.versioned_eval.unwrap();
         let eval_scores = message.eval_scores;
 
-        let mut conn = olly_db::establish_connection();
+        let mut conn = polay_db::establish_connection();
 
         let mut repo = DieselRepository {
             connection: &mut conn,
-            table: olly_db::schema::eval_version::table,
+            table: polay_db::schema::eval_version::table,
         };
 
         let existing_eval_version = repo
@@ -96,7 +96,7 @@ impl OllyllmService for OllyllmRpcDefinition {
 
         let mut repo = DieselRepository {
             connection: &mut conn,
-            table: olly_db::schema::eval_result::table,
+            table: polay_db::schema::eval_result::table,
         };
 
         let previous_eval_result = repo
@@ -251,9 +251,9 @@ pub struct RpcServer {
 
 impl RpcServer {
     pub async fn new(addr: core::net::SocketAddr) -> Self {
-        let ollyllm: OllyllmRpcDefinition = OllyllmRpcDefinition::default();
+        let polay: PolayRpcDefinition = PolayRpcDefinition::default();
         let server = transport::Server::builder()
-            .add_service(OllyllmServiceServer::new(ollyllm))
+            .add_service(PolayServiceServer::new(polay))
             .serve(addr);
 
         RpcServer {

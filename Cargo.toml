@@ -1,4 +1,3 @@
 [workspace]
-members = [ "db", "proto", "server",]
+members = ["db", "proto", "server", ]
 resolver = "2"
-
