@@ -1,19 +1,19 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    eval_result (id) {
+    eval (id) {
         id -> Int4,
-        eval_version_id -> Int4,
-        scores -> Jsonb,
+        name -> Text,
         created_at -> Timestamptz,
+        prompt_version_id -> Int4,
     }
 }
 
 diesel::table! {
-    eval_version (id) {
+    eval_result (id) {
         id -> Int4,
-        name -> Text,
-        version -> Text,
+        eval_id -> Int4,
+        scores -> Jsonb,
         created_at -> Timestamptz,
     }
 }
@@ -24,6 +24,15 @@ diesel::table! {
         ts -> Timestamptz,
         message -> Text,
         span_id -> Int4,
+    }
+}
+
+diesel::table! {
+    prompt_version (id) {
+        id -> Int4,
+        name -> Text,
+        version -> Text,
+        created_at -> Timestamptz,
     }
 }
 
@@ -59,14 +68,16 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(eval_result -> eval_version (eval_version_id));
+diesel::joinable!(eval -> prompt_version (prompt_version_id));
+diesel::joinable!(eval_result -> eval (eval_id));
 diesel::joinable!(log -> span (span_id));
 diesel::joinable!(test_version -> test_registration (test_registration_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    eval,
     eval_result,
-    eval_version,
     log,
+    prompt_version,
     span,
     test_registration,
     test_version,

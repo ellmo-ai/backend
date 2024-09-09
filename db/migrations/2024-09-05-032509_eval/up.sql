@@ -1,15 +1,23 @@
-CREATE TABLE eval_version (
+CREATE TABLE prompt_version (
     id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name TEXT NOT NULL,
     version TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE eval (
+    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    prompt_version_id INT NOT NULL,
+    FOREIGN KEY (prompt_version_id) REFERENCES prompt_version (id)
+);
+
 CREATE TABLE eval_result (
     id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    eval_version_id INT NOT NULL,
+    eval_id INT NOT NULL,
     scores jsonb DEFAULT '{}' NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    FOREIGN KEY (eval_version_id) REFERENCES eval_version (id)
+    FOREIGN KEY (eval_id) REFERENCES eval (id)
 );
 

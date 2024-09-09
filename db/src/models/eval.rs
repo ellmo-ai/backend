@@ -1,38 +1,30 @@
 use crate::models::repository::{DieselRepository, Repository};
-use crate::schema::eval_result::dsl::eval_result;
+use crate::schema::eval::dsl::eval;
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
 
-#[derive(Queryable, Selectable, Debug)]
-#[diesel(table_name = crate::schema::eval_result)]
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = crate::schema::eval)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct EvalResult {
+#[allow(dead_code)]
+pub struct Eval {
     pub id: i32,
-    pub eval_id: i32,
-    pub scores: serde_json::Value,
+    pub name: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
+    pub prompt_version_id: i32,
 }
 
 #[derive(Insertable, Selectable, Queryable)]
-#[diesel(table_name = crate::schema::eval_result)]
+#[diesel(table_name = crate::schema::eval)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct InsertableEvalResult {
-    pub eval_id: i32,
-    pub scores: serde_json::Value,
+pub struct InsertableEval {
+    pub name: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
+    pub prompt_version_id: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SingleEvalScore {
-    pub eval_hash: String,
-    pub score: f32,
-}
-
-pub type EvalRunScores = Vec<SingleEvalScore>;
-
-impl<'a> Repository for DieselRepository<'a, eval_result> {
-    type Entity = EvalResult;
-    type InsertableEntity = InsertableEvalResult;
+impl<'a> Repository for DieselRepository<'a, eval> {
+    type Entity = Eval;
+    type InsertableEntity = InsertableEval;
     type Id = i32;
 
     fn find_all(&mut self) -> QueryResult<Vec<Self::Entity>> {
@@ -48,7 +40,7 @@ impl<'a> Repository for DieselRepository<'a, eval_result> {
     fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity> {
         diesel::insert_into(self.table)
             .values(entity)
-            .returning(crate::schema::eval_result::all_columns)
+            .returning(crate::schema::eval::all_columns)
             .get_result(self.connection)
     }
 

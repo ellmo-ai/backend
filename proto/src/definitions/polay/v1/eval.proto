@@ -4,10 +4,14 @@ package polay.v1;
 
 import "google/protobuf/timestamp.proto";
 
-/*  VersionedEval represents a unique eval. */
-message VersionedEval {
-  string name = 1; // ID of test
-  string version = 2; // SemVer of test
+/*  Eval represents a unique eval. */
+message Eval {
+  string name = 1; // ID of eval
+}
+
+message VersionedPrompt {
+  string name = 1; // ID of prompt
+  string version = 2; // Version of prompt
 }
 
 /*  EvalScore represents a single score of an eval. */
@@ -18,8 +22,10 @@ message EvalScore {
 
 /*  RecordEvalRequest represents a request to record an eval run. */
 message RecordEvalRequest {
-  VersionedEval versioned_eval = 1; // Unique eval
-  repeated EvalScore eval_scores = 2; // List of eval scores
+  Eval eval = 1; // Eval that was run
+  VersionedPrompt prompt = 2; // Prompt being evaluated
+  optional string base_version = 3; // Base version of prompt to compare against (if not defined, the previous version will be used)
+  repeated EvalScore eval_scores = 4; // List of eval scores
 }
 
 /* EvalOutcome represents the outcome of an eval. */
@@ -47,4 +53,3 @@ message RecordEvalResponse {
 
     string message = 4; // Any message to the user
 }
-
