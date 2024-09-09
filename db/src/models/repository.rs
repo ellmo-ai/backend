@@ -19,3 +19,12 @@ where
     pub connection: &'a mut diesel::PgConnection,
     pub table: T,
 }
+
+impl<'a, T> DieselRepository<'a, T>
+where
+    T: diesel::Table,
+{
+    pub fn new(connection: &'a mut diesel::PgConnection, table: T) -> Self {
+        DieselRepository { connection, table }
+    }
+}

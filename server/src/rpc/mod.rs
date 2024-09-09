@@ -49,7 +49,6 @@ impl PolayService for PolayRpcDefinition {
         &self,
         request: tonic::Request<RecordEvalRequest>,
     ) -> Result<tonic::Response<RecordEvalResponse>, tonic::Status> {
-        println!("Received!");
         eval::record_eval(request).await
     }
 }
