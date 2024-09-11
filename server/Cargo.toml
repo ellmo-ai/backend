@@ -6,8 +6,8 @@ default-run = "server"
 
 [dependencies]
 # Local
-polay_proto = { package = "proto", path = "../proto" }
-polay_db = { package = "db", path = "../db" }
+ellmo_proto = { package = "proto", path = "../proto" }
+ellmo_db = { package = "db", path = "../db" }
 
 # Proto
 tonic = { version = "0.12.0", features = ["prost"] }

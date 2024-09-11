@@ -5,16 +5,16 @@ use std::pin::Pin;
 
 use tonic::transport;
 
-use polay_proto::polay::polay_service_server::{PolayService, PolayServiceServer};
-use polay_proto::polay::{
+use ellmo_proto::ellmo::ellmo_service_server::{EllmoService, EllmoServiceServer};
+use ellmo_proto::ellmo::{
     RecordEvalRequest, RecordEvalResponse, ReportSpanRequest, TestExecutionRequest,
 };
 
 #[derive(Default)]
-struct PolayRpcDefinition {}
+struct EllmoRpcDefinition {}
 
 #[tonic::async_trait]
-impl PolayService for PolayRpcDefinition {
+impl EllmoService for EllmoRpcDefinition {
     async fn report_span(
         &self,
         _request: tonic::Request<ReportSpanRequest>,
@@ -59,9 +59,9 @@ pub struct RpcServer {
 
 impl RpcServer {
     pub async fn new(addr: core::net::SocketAddr) -> Self {
-        let polay: PolayRpcDefinition = PolayRpcDefinition::default();
+        let ellmo: EllmoRpcDefinition = EllmoRpcDefinition::default();
         let server = transport::Server::builder()
-            .add_service(PolayServiceServer::new(polay))
+            .add_service(EllmoServiceServer::new(ellmo))
             .serve(addr);
 
         RpcServer {

@@ -4,16 +4,16 @@ use prost_types::Timestamp;
 use std::net::SocketAddr;
 use tonic::transport::Channel;
 
-use crate::polay::polay_service_client::PolayServiceClient;
-use crate::polay::{ReportSpanRequest, Span, TestExecutionRequest, VersionedTest};
+use crate::ellmo::ellmo_service_client::EllmoServiceClient;
+use crate::ellmo::{ReportSpanRequest, Span, TestExecutionRequest, VersionedTest};
 
 pub struct DummyClient {
-    client: PolayServiceClient<Channel>,
+    client: EllmoServiceClient<Channel>,
 }
 
 impl DummyClient {
     pub async fn new(socket_addr: SocketAddr) -> Result<Self, tonic::transport::Error> {
-        let client = PolayServiceClient::connect(format!("http://{}", socket_addr)).await?;
+        let client = EllmoServiceClient::connect(format!("http://{}", socket_addr)).await?;
         Ok(DummyClient { client })
     }
 

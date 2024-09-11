@@ -1,4 +1,4 @@
-pub mod polay {
-    include!("../gen/src/polay.v1.rs");
+pub mod ellmo {
+    include!("../gen/src/ellmo.v1.rs");
 }
 pub mod examples;

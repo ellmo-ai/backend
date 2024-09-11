@@ -10,7 +10,7 @@ use serde_json::json;
 
 use diesel::prelude::*;
 
-use polay_db::{
+use ellmo_db::{
     models::{
         repository::{DieselRepository, Repository},
         test_registration::{InsertableTestRegistration, TestRegistration},
@@ -38,10 +38,10 @@ struct Test {
 const BUCKET: &str = "test-registrations";
 
 pub async fn test_post((Json(payload),): (Json<RegisterTestPayload>,)) -> impl IntoResponse {
-    let mut conn = polay_db::establish_connection();
+    let mut conn = ellmo_db::establish_connection();
     let mut repo = DieselRepository {
         connection: &mut conn,
-        table: polay_db::schema::test_registration::table,
+        table: ellmo_db::schema::test_registration::table,
     };
 
     let prev_test_registration = repo

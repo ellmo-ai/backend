@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use std::collections::HashMap;
 use tonic::{Request, Response, Status};
 
-use polay_db::{
+use ellmo_db::{
     establish_connection,
     models::{
         eval::{Eval, InsertableEval},
@@ -13,7 +13,7 @@ use polay_db::{
     },
     schema::{eval, eval_result, prompt_version},
 };
-use polay_proto::polay::{
+use ellmo_proto::ellmo::{
     EvalOutcome, EvalScore, MeaningfulEvalScore, RecordEvalRequest, RecordEvalResponse,
     VersionedPrompt,
 };
@@ -104,7 +104,7 @@ fn get_or_create_prompt_version(
 
 fn get_or_create_eval_version(
     conn: &mut PgConnection,
-    eval: &polay_proto::polay::Eval,
+    eval: &ellmo_proto::ellmo::Eval,
     prompt_version: &PromptVersion,
 ) -> Result<Eval, Status> {
     let mut repo = DieselRepository::new(conn, eval::table);

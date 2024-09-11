@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package polay.v1;
+package ellmo.v1;
 
 import "google/protobuf/empty.proto";
-import "polay/v1/span.proto";
-import "polay/v1/test.proto";
-import "polay/v1/eval.proto";
+import "ellmo/v1/span.proto";
+import "ellmo/v1/test.proto";
+import "ellmo/v1/eval.proto";
 
-service PolayService {
+service EllmoService {
   rpc QueueTest(TestExecutionRequest) returns (google.protobuf.Empty) {}
   rpc ReportSpan(ReportSpanRequest) returns (google.protobuf.Empty) {}
   rpc RecordEval(RecordEvalRequest) returns (RecordEvalResponse) {}

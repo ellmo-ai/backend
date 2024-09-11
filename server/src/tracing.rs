@@ -1,6 +1,6 @@
 use axum::{http::StatusCode, Json};
 use chrono::TimeZone;
-use polay_db::models::repository::{DieselRepository, Repository};
+use ellmo_db::models::repository::{DieselRepository, Repository};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -26,18 +26,18 @@ pub struct TracingPayload {
 pub async fn post(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>) {
     let traces = payload.traces;
 
-    let mut conn = polay_db::establish_connection();
+    let mut conn = ellmo_db::establish_connection();
 
     let mut repo = DieselRepository {
         connection: &mut conn,
-        table: polay_db::schema::span::table,
+        table: ellmo_db::schema::span::table,
     };
 
     let mut uuid_to_span_id: HashMap<String, i32> = HashMap::new();
 
     fn process_span(
         span: Span,
-        repo: &mut DieselRepository<polay_db::schema::span::table>,
+        repo: &mut DieselRepository<ellmo_db::schema::span::table>,
         uuid_to_span_id: &mut HashMap<String, i32>,
     ) {
         // Convert start and end times to chrono::DateTime
@@ -55,7 +55,7 @@ pub async fn post(Json(payload): Json<TracingPayload>) -> (StatusCode, Json<()>)
                 .and_then(|uuid| uuid_to_span_id.get(&uuid).copied());
 
             // Create a new InsertableSpan
-            let insertable_span = polay_db::models::span::InsertableSpan {
+            let insertable_span = ellmo_db::models::span::InsertableSpan {
                 ts_start: valid_start_time,
                 ts_end: valid_end_time,
                 operation_name: span.operation_name,
