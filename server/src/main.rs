@@ -26,7 +26,7 @@ async fn main() {
         axum::serve(listener, app).await.unwrap();
     });
 
-    let addr: core::net::SocketAddr = "[::1]:50051".parse().unwrap();
+    let addr: core::net::SocketAddr = "0.0.0.0:50051".parse().unwrap();
     let server: RpcServer = RpcServer::new(addr).await;
     server.serve().await.unwrap();
 }

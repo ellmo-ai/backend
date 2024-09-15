@@ -8,7 +8,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
-    protobuf-compiler
+    protobuf-compiler \
+    build-essential
 
 # Install buf (latest release)
 RUN curl -sSL \
@@ -26,8 +27,10 @@ WORKDIR /app/server
 # Copy the entire server project
 COPY ./server ./
 
-# Build the release binary
-RUN cargo install --path .
+RUN rustup target add x86_64-unknown-linux-gnu
+
+# Build the release binary for linux/amd64/v3
+RUN cargo build --release --target x86_64-unknown-linux-gnu
 
 # Second stage: Create the final image for server
 FROM rust:1.78.0-slim as final
@@ -36,11 +39,20 @@ RUN apt-get update && apt-get install -y \
     libpq5
 
 # Copy the built binary from the builder stage
-COPY --from=builder /usr/local/cargo/bin/server /usr/local/bin/server
+COPY --from=builder /app/server/target/x86_64-unknown-linux-gnu/release/server /usr/local/bin/server
 
-# Expose the server port
+# Set environment variables
+ENV POSTGRES_DB=ellmo
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=password
+ENV DATABASE_URL=postgres://postgres:password@localhost:5432/olly
+ENV AWS_ACCESS_KEY_ID=
+ENV AWS_SECRET_ACCESS_KEY=
+ENV AWS_REGION=
+
+# Expose the REST and gRPC ports
 EXPOSE 3000
+EXPOSE 50051
 
 # Run the server
 CMD ["server"]
-
