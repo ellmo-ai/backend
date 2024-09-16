@@ -1,5 +1,5 @@
 # First stage: Build the server
-FROM rust:1.78.0 as builder
+FROM rust:1.78.0 AS builder
 
 # Set the working directory
 WORKDIR /app
@@ -33,22 +33,13 @@ RUN rustup target add x86_64-unknown-linux-gnu
 RUN cargo build --release --target x86_64-unknown-linux-gnu
 
 # Second stage: Create the final image for server
-FROM rust:1.78.0-slim as final
+FROM rust:1.78.0-slim AS final
 
 RUN apt-get update && apt-get install -y \
     libpq5
 
 # Copy the built binary from the builder stage
 COPY --from=builder /app/server/target/x86_64-unknown-linux-gnu/release/server /usr/local/bin/server
-
-# Set environment variables
-ENV POSTGRES_DB=ellmo
-ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=password
-ENV DATABASE_URL=postgres://postgres:password@localhost:5432/olly
-ENV AWS_ACCESS_KEY_ID=
-ENV AWS_SECRET_ACCESS_KEY=
-ENV AWS_REGION=
 
 # Expose the REST and gRPC ports
 EXPOSE 3000

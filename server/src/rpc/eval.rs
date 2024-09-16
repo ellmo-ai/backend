@@ -40,7 +40,7 @@ pub async fn record_eval(
     let prompt_version = get_or_create_prompt_version(&mut conn, &prompt)?;
     let existing_eval_version = get_or_create_eval_version(&mut conn, &eval, &prompt_version)?;
 
-    // Get the previous eval result for the base version
+    // Get the previous eval result for the base version, if it exists
     let previous_eval_result = get_previous_eval_result(&mut conn, &prompt, base_version)?;
 
     let scores: EvalRunScores = convert_eval_scores(eval_scores);
@@ -142,7 +142,10 @@ fn get_previous_eval_result(
     prompt: &VersionedPrompt,
     base_version: Option<String>,
 ) -> Result<Option<EvalResult>, Status> {
-    let base_prompt_version = get_base_prompt_version(conn, prompt, base_version)?;
+    let base_prompt_version = match get_base_prompt_version(conn, prompt, base_version)? {
+        Some(version) => version,
+        None => return Ok(None),
+    };
 
     let repo = DieselRepository::new(conn, eval_result::table);
 
@@ -160,24 +163,29 @@ fn get_base_prompt_version(
     conn: &mut PgConnection,
     prompt: &VersionedPrompt,
     base_version: Option<String>,
-) -> Result<PromptVersion, Status> {
+) -> Result<Option<PromptVersion>, Status> {
     let repo = DieselRepository::new(conn, prompt_version::table);
 
     if let Some(base_version) = base_version {
-        repo.table
+        let res = repo
+            .table
             .filter(prompt_version::version.eq(&base_version))
             .first::<PromptVersion>(conn)
             .optional()
             .map_err(|_| Status::internal("Failed to fetch base prompt version"))?
-            .ok_or_else(|| Status::invalid_argument("Base version not found"))
+            .ok_or_else(|| Status::invalid_argument("Base version not found"))?;
+
+        Ok(Some(res))
     } else {
-        repo.table
+        let res = repo
+            .table
             .filter(prompt_version::version.lt(&prompt.version))
             .order(prompt_version::version.desc())
             .first::<PromptVersion>(conn)
             .optional()
-            .map_err(|_| Status::internal("Failed to fetch base prompt version"))?
-            .ok_or_else(|| Status::not_found("No previous version found"))
+            .map_err(|_| Status::internal("Failed to fetch base prompt version"))?;
+
+        Ok(res)
     }
 }
 
