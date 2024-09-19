@@ -1,5 +1,5 @@
 # First stage: Build the server
-FROM rust:1.78.0 as builder
+FROM rust:1.78.0 AS builder
 
 # Set the working directory
 WORKDIR /app
@@ -8,7 +8,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
-    protobuf-compiler
+    protobuf-compiler \
+    build-essential
 
 # Install buf (latest release)
 RUN curl -sSL \
@@ -26,21 +27,23 @@ WORKDIR /app/server
 # Copy the entire server project
 COPY ./server ./
 
-# Build the release binary
-RUN cargo install --path .
+RUN rustup target add x86_64-unknown-linux-gnu
+
+# Build the release binary for linux/amd64/v3
+RUN cargo build --release --target x86_64-unknown-linux-gnu
 
 # Second stage: Create the final image for server
-FROM rust:1.78.0-slim as final
+FROM rust:1.78.0-slim AS final
 
 RUN apt-get update && apt-get install -y \
     libpq5
 
 # Copy the built binary from the builder stage
-COPY --from=builder /usr/local/cargo/bin/server /usr/local/bin/server
+COPY --from=builder /app/server/target/x86_64-unknown-linux-gnu/release/server /usr/local/bin/server
 
-# Expose the server port
+# Expose the REST and gRPC ports
 EXPOSE 3000
+EXPOSE 50051
 
 # Run the server
 CMD ["server"]
-

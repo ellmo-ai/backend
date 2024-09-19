@@ -5,7 +5,7 @@ CREATE TABLE span (
     operation_name TEXT NOT NULL,
     parent_span_id INT,
     external_uuid UUID,
-    FOREIGN KEY (parent_span_id) REFERENCES span (id)
+    FOREIGN KEY (parent_span_id) REFERENCES span (id) ON DELETE CASCADE
 );
 
 CREATE TABLE log (
@@ -13,6 +13,6 @@ CREATE TABLE log (
     ts TIMESTAMPTZ NOT NULL,
     message TEXT NOT NULL,
     span_id INT NOT NULL,
-    FOREIGN KEY (span_id) REFERENCES span (id)
+    FOREIGN KEY (span_id) REFERENCES span (id) ON DELETE CASCADE
 );
 

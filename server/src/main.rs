@@ -21,13 +21,14 @@ async fn main() {
             .layer(CorsLayer::permissive());
 
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-        println!("listening on {}", listener.local_addr().unwrap());
+        println!("HTTP listening on {}", listener.local_addr().unwrap());
 
         axum::serve(listener, app).await.unwrap();
     });
 
-    let addr: core::net::SocketAddr = "[::1]:50051".parse().unwrap();
+    let addr: core::net::SocketAddr = "0.0.0.0:50051".parse().unwrap();
     let server: RpcServer = RpcServer::new(addr).await;
+    println!("gRPC listening on {}", addr);
     server.serve().await.unwrap();
 }
 

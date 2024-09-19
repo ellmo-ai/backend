@@ -13,6 +13,6 @@ CREATE TABLE test_version (
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     test_registration_id INT NOT NULL,
-    FOREIGN KEY (test_registration_id) REFERENCES test_registration (id)
+    FOREIGN KEY (test_registration_id) REFERENCES test_registration (id) ON DELETE CASCADE
 );
 

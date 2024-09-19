@@ -12,7 +12,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     networks:
-      - polay-network
+      - ellmo-network
 
   server:
     build:
@@ -28,7 +28,7 @@ services:
     links:
       - db:db
     networks:
-      - polay-network
+      - ellmo-network
     volumes:
       - .:/app
 
@@ -37,4 +37,4 @@ volumes:
 
 
 networks:
-  polay-network:
+  ellmo-network:
