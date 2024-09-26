@@ -4,8 +4,9 @@
 use crate::models::base::diff;
 
 use diesel::associations::HasTable;
+use diesel::expression::ValidGrouping;
 use diesel::prelude::*;
-use diesel::query_builder::{AsQuery, QueryId};
+use diesel::query_builder::{AsQuery, QueryFragment, QueryId};
 use diesel::{Insertable, QuerySource};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -16,29 +17,47 @@ use diff::{Change, Diff, DiffItem, Diffable};
 pub struct Model<M, T>
 where
     T: Table,
-    M: Diffable + Insertable<T>,
+    M: Diffable + Insertable<T> + Columns,
 {
     pub record: M,
     initial: Option<M>,
     table: T,
 }
 
+use diesel::expression::is_aggregate::No;
+use diesel::expression::{NonAggregate, SelectableExpression};
+
+pub trait Columns {
+    type ReturnType: QueryFragment<diesel::pg::Pg>
+        + QueryId
+        + SelectableExpression<Self::Table>
+        + NonAggregate;
+    type Table: Table;
+
+    fn columns() -> Self::ReturnType;
+}
+
 impl<M, T> Model<M, T>
 where
     T: Table + QueryId + 'static,
-    M: Diffable + Insertable<T>,
-    // Needed for insert
-    <M as diesel::Insertable<T>>::Values: diesel::query_builder::QueryId,
-    <M as diesel::Insertable<T>>::Values: diesel::query_builder::QueryFragment<diesel::pg::Pg>,
-    <T as QuerySource>::FromClause: diesel::query_builder::QueryFragment<diesel::pg::Pg>,
-    <M as diesel::Insertable<T>>::Values:
-        diesel::insertable::CanInsertInSingleQuery<diesel::pg::Pg>,
+    M: Diffable + Insertable<T> + Columns<Table = T>,
+
+    // Needed for returning clause
+    <M as Columns>::ReturnType:
+        SelectableExpression<T> + QueryFragment<diesel::pg::Pg> + NonAggregate,
 {
-    fn insert(self, connection: &mut PgConnection) {
+    fn insert(self, connection: &mut PgConnection)
+    where
+        <M as diesel::Insertable<T>>::Values: diesel::query_builder::QueryId
+            + diesel::query_builder::QueryFragment<diesel::pg::Pg>
+            + diesel::insertable::CanInsertInSingleQuery<diesel::pg::Pg>,
+        <T as QuerySource>::FromClause: diesel::query_builder::QueryFragment<diesel::pg::Pg>,
+    {
         use diesel::RunQueryDsl;
 
         diesel::insert_into(self.table)
             .values(self.record)
+            .returning(M::columns())
             .execute(connection)
             .expect("Error inserting record");
     }
@@ -57,14 +76,13 @@ pub trait ModelLifecycle<T: diesel::Table> {
 impl<M, T> Model<M, T>
 where
     T: Table,
-    M: Diffable + Insertable<T>,
+    M: Diffable + Insertable<T> + Columns,
 {
     pub fn new(record: M, table: T) -> Self {
         Model {
             record: record.clone(),
             initial: Some(record),
             table,
-            // _marker: PhantomData,
         }
     }
 
@@ -73,7 +91,6 @@ where
             record,
             initial: None,
             table,
-            // _marker: PhantomData,
         }
     }
 
@@ -128,70 +145,3 @@ where
         let _changes = self.changes(true);
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[derive(Serialize, Clone)]
-//     struct TestModel {
-//         id: i32,
-//         name: String,
-//     }
-//
-//     impl Diffable for TestModel {
-//         fn diff(&self, other: &Self) -> Option<Diff> {
-//             let mut diff = BTreeMap::new();
-//
-//             if self.name != other.name {
-//                 diff.insert(
-//                     "name".to_string(),
-//                     DiffItem {
-//                         before: serde_json::Value::String(self.name.clone()),
-//                         after: serde_json::Value::String(other.name.clone()),
-//                     },
-//                 );
-//             }
-//
-//             if diff.is_empty() {
-//                 None
-//             } else {
-//                 Some(diff)
-//             }
-//         }
-//     }
-//
-//     #[test]
-//     fn basic() {
-//         let test_table = table! {
-//             test_model (id) {
-//                 id -> Int4,
-//                 name -> Text,
-//             }
-//         };
-//
-//         impl ModelLifecycle<test_table> for TestModel {
-//             fn save(&mut self) {
-//                 // Save the record
-//                 // Update the initial record
-//             }
-//
-//             fn update(&mut self) {
-//                 // Update the record
-//                 // Update the initial record
-//             }
-//
-//             fn delete(&mut self) {
-//                 // Delete the record
-//                 // Update the initial record
-//             }
-//         }
-//
-//         let e = TestModel {
-//             id: 1,
-//             name: "foo".to_string(),
-//         };
-//
-//         let mut model = Model::new(e, test_table);
-//     }
-// }
