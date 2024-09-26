@@ -1,22 +1,17 @@
 use crate::models::repository::{DieselRepository, Repository};
 use crate::schema::eval::dsl::eval;
 use diesel::prelude::*;
+use serde::Serialize;
 
-#[derive(Queryable, Selectable)]
+// GOALS
+// Need a way to track changes to the model
+// Need a way to add middleware logic for updating/saving/deleting
+
+#[derive(Serialize, ellmo_macros::Insertable, Queryable, Selectable)]
 #[diesel(table_name = crate::schema::eval)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[allow(dead_code)]
 pub struct Eval {
     pub id: i32,
-    pub name: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub prompt_version_id: i32,
-}
-
-#[derive(Insertable, Selectable, Queryable)]
-#[diesel(table_name = crate::schema::eval)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct InsertableEval {
     pub name: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub prompt_version_id: i32,

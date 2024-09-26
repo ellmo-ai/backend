@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-chrono = "0.4.38"
+ellmo_macros = { package = "macros", path = "../macros" }
+
+chrono = { version = "0.4.38", features = ["serde"] }
 diesel = { version = "2.2.3", features = ["postgres", "chrono", "serde_json", "uuid"] }
 dotenvy = "0.15.7"
 serde = { version = "1.0", features = ["derive"] }
