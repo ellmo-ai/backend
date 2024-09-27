@@ -1,35 +1,26 @@
-#![allow(unused_imports)]
 #![allow(dead_code)]
 
 use crate::models::base::diff;
 
 use diesel::associations::HasTable;
-use diesel::dsl::Update;
-use diesel::expression::{AsExpression, ValidGrouping};
+use diesel::expression::{NonAggregate, SelectableExpression};
+use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_builder::{AsQuery, IntoUpdateTarget, QueryFragment, QueryId};
 use diesel::{Insertable, QuerySource};
 use serde::Serialize;
-use std::collections::BTreeMap;
-use std::marker::PhantomData;
 
-use diff::{Change, Diff, DiffItem, Diffable};
+use diff::{Change, Diffable};
 
 pub struct Model<M, T>
 where
     T: Table,
-    M: Diffable + Columns,
+    M: Columns,
 {
     pub record: M,
     initial: Option<M>,
     table: T,
 }
-
-use diesel::expression::is_aggregate::No;
-use diesel::expression::{NonAggregate, SelectableExpression};
-use diesel::pg::Pg;
-use diesel::query_dsl::filter_dsl::FindDsl;
-use diesel::query_dsl::methods::FilterDsl;
 
 pub trait Columns {
     type ReturnType: QueryFragment<diesel::pg::Pg> + QueryId + NonAggregate;
@@ -37,16 +28,10 @@ pub trait Columns {
     fn columns() -> Self::ReturnType;
 }
 
-pub trait PrimaryKey {
-    type PK: AsExpression<diesel::sql_types::Integer> + QueryId + NonAggregate;
-
-    fn primary_key(&self) -> Self::PK;
-}
-
 impl<M, T> Model<M, T>
 where
     T: Table + QueryId + 'static,
-    M: Diffable + Columns,
+    M: Columns,
 
     // Needed for returning clause
     <M as Columns>::ReturnType:
@@ -69,21 +54,9 @@ where
             .expect("Error inserting record");
     }
 
-    // pub fn update_row<'a, Model, Chg, Tab>(table: Tab, changeset: Chg, conn: &mut PgConnection)
-    // where
-    //     Chg: AsChangeset<Target = <Tab as diesel::associations::HasTable>::Table>,
-    //     Tab: QuerySource + diesel::query_builder::IntoUpdateTarget,
-    //     Update<Tab, Chg>: diesel::query_dsl::LoadQuery<'a, PgConnection, Model>,
-    // {
-    //     diesel::update(table)
-    //         .set(changeset)
-    //         .get_result::<Model>(conn)
-    //         .expect("Error updating record");
-    // }
-
     pub fn update(self, connection: &mut PgConnection)
     where
-        M: AsChangeset<Target = T>,
+        M: Diffable + AsChangeset<Target = T>,
         T: IntoUpdateTarget + HasTable<Table = T> + QuerySource + QueryFragment<Pg>,
         <T as QuerySource>::FromClause: QueryFragment<Pg>,
         <T as IntoUpdateTarget>::WhereClause: QueryFragment<Pg>,
@@ -96,9 +69,10 @@ where
     {
         use diesel::RunQueryDsl;
 
-        let _ = diesel::update(self.table)
+        diesel::update(self.table)
             .set(self.record)
-            .execute(connection);
+            .execute(connection)
+            .expect("Error updating record");
     }
 }
 
@@ -115,7 +89,7 @@ pub trait ModelLifecycle<T: diesel::Table> {
 impl<M, T> Model<M, T>
 where
     T: Table,
-    M: Diffable + Columns,
+    M: Columns + Clone + Serialize,
 {
     pub fn new(record: M, table: T) -> Self {
         Model {
@@ -145,7 +119,10 @@ where
         &self.initial
     }
 
-    fn changes(&self, is_delete: bool) -> Option<Change> {
+    fn changes(&self, is_delete: bool) -> Option<Change>
+    where
+        M: Diffable,
+    {
         if is_delete {
             return Some(Change::Delete(serde_json::to_value(&self.record).unwrap()));
         }
@@ -156,7 +133,10 @@ where
         }
     }
 
-    pub fn save(&mut self) {
+    pub fn save(&mut self)
+    where
+        M: Diffable,
+    {
         let changes = self.changes(false);
 
         match changes {
@@ -172,7 +152,10 @@ where
         }
     }
 
-    pub fn delete(&mut self) {
+    pub fn delete(&mut self)
+    where
+        M: Diffable,
+    {
         if self.is_new() {
             // Nothing to delete
             return;

@@ -29,12 +29,6 @@ pub struct InsertableEval {
     pub prompt_version_id: i32,
 }
 
-impl Diffable for InsertableEval {
-    fn diff(&self, _other: &Self) -> Option<Diff> {
-        None
-    }
-}
-
 impl Columns for InsertableEval {
     type ReturnType = (
         crate::schema::eval::id,
