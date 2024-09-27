@@ -3,7 +3,7 @@ use crate::schema::eval_result::dsl::eval_result;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Debug, Identifiable, AsChangeset)]
 #[diesel(table_name = crate::schema::eval_result)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct EvalResult {
@@ -48,6 +48,13 @@ impl<'a> Repository for DieselRepository<'a, eval_result> {
     fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity> {
         diesel::insert_into(self.table)
             .values(entity)
+            .returning(crate::schema::eval_result::all_columns)
+            .get_result(self.connection)
+    }
+
+    fn update(&mut self, id: Self::Id, entity: &Self::Entity) -> QueryResult<Self::Entity> {
+        diesel::update(self.table.find(id))
+            .set(entity)
             .returning(crate::schema::eval_result::all_columns)
             .get_result(self.connection)
     }

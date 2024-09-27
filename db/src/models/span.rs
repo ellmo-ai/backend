@@ -2,7 +2,7 @@ use crate::models::repository::{DieselRepository, Repository};
 use crate::schema::span::dsl::span;
 use diesel::prelude::*;
 
-#[derive(Queryable, Selectable)]
+#[derive(Queryable, Selectable, Identifiable, AsChangeset)]
 #[diesel(table_name = crate::schema::span)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[allow(dead_code)]
@@ -42,6 +42,13 @@ impl<'a> Repository for DieselRepository<'a, span> {
     fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity> {
         diesel::insert_into(self.table)
             .values(entity)
+            .returning(crate::schema::span::all_columns)
+            .get_result(self.connection)
+    }
+
+    fn update(&mut self, id: Self::Id, entity: &Self::Entity) -> QueryResult<Self::Entity> {
+        diesel::update(self.table.find(id))
+            .set(entity)
             .returning(crate::schema::span::all_columns)
             .get_result(self.connection)
     }

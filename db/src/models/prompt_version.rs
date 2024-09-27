@@ -2,7 +2,7 @@ use crate::models::repository::{DieselRepository, Repository};
 use crate::schema::prompt_version::dsl::prompt_version;
 use diesel::prelude::*;
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(Queryable, Selectable, Debug, Identifiable, AsChangeset)]
 #[diesel(table_name = crate::schema::prompt_version)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[allow(dead_code)]
@@ -40,6 +40,13 @@ impl<'a> Repository for DieselRepository<'a, prompt_version> {
     fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity> {
         diesel::insert_into(self.table)
             .values(entity)
+            .returning(crate::schema::prompt_version::all_columns)
+            .get_result(self.connection)
+    }
+
+    fn update(&mut self, id: Self::Id, entity: &Self::Entity) -> QueryResult<Self::Entity> {
+        diesel::update(self.table.find(id))
+            .set(entity)
             .returning(crate::schema::prompt_version::all_columns)
             .get_result(self.connection)
     }

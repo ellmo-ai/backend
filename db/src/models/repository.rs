@@ -9,6 +9,7 @@ pub trait Repository {
     fn find_all(&mut self) -> QueryResult<Vec<Self::Entity>>;
     fn find_by_id(&mut self, id: Self::Id) -> QueryResult<Self::Entity>;
     fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity>;
+    fn update(&mut self, id: Self::Id, entity: &Self::Entity) -> QueryResult<Self::Entity>;
     fn delete(&mut self, id: Self::Id) -> QueryResult<()>;
 }
 
