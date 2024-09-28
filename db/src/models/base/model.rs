@@ -3,6 +3,7 @@
 use crate::models::base::diff;
 
 use diesel::associations::HasTable;
+use diesel::deserialize::FromSqlRow;
 use diesel::expression::{NonAggregate, SelectableExpression};
 use diesel::pg::Pg;
 use diesel::prelude::*;
@@ -28,15 +29,13 @@ enum ModelType<Mod, Ins> {
 /// A helper struct for working with Diesel models
 /// # Type parameters
 /// - `Mod`: The model type
-/// - `Ins`: The insertable type
 /// - `Tab`: The table type
-pub struct Model<Mod, Ins, Tab>
+pub struct Model<Mod, Tab>
 where
-    Ins: Columns + Insertable<Tab>,
-    Tab: Table,
+    Tab: diesel::Table,
 {
     /// The current record, whether new or loaded from the database
-    pub record: ModelType<Mod, Ins>,
+    pub record: Mod,
     /// The initial state of the model, if it was loaded from the database
     initial: Option<Mod>,
     /// The table associated with the model
@@ -49,59 +48,31 @@ pub trait Columns {
     fn columns() -> Self::ReturnType;
 }
 
-impl<Mod, Ins, Tab> Model<Mod, Ins, Tab>
+impl<Mod, Tab> Model<Mod, Tab>
 where
-    Tab: Table + QueryId + 'static,
-    Ins: Columns + Insertable<Tab>,
-    Mod: Diffable,
+    Tab: diesel::Table + QueryId + 'static,
+    Mod: Insertable<Tab> + Columns + Selectable<diesel::pg::Pg>,
 
     // Needed for returning clause in insert
-    <Ins as Columns>::ReturnType:
+    <Mod as Columns>::ReturnType:
         SelectableExpression<Tab> + QueryFragment<diesel::pg::Pg> + NonAggregate,
 {
     pub fn insert(self, connection: &mut PgConnection) -> Result<(), ModelError>
     where
-        <Ins as diesel::Insertable<Tab>>::Values: diesel::query_builder::QueryId
+        <Mod as diesel::Insertable<Tab>>::Values: diesel::query_builder::QueryId
             + diesel::query_builder::QueryFragment<diesel::pg::Pg>
             + diesel::insertable::CanInsertInSingleQuery<diesel::pg::Pg>,
         <Tab as QuerySource>::FromClause: diesel::query_builder::QueryFragment<diesel::pg::Pg>,
     {
         use diesel::RunQueryDsl;
 
-        match self.record {
-            ModelType::Insertable(record) => {
-                diesel::insert_into(self.table)
-                    .values(record)
-                    .returning(Ins::columns())
-                    .execute(connection)
-                    .expect("Error inserting record");
-                Ok(())
-            }
-            // Shouldn't be possible to insert a model that already exists
-            ModelType::Model(_) => Err(ModelError::AlreadyExists),
-        }
-    }
+        let res = diesel::insert_into(self.table)
+            .values(self.record)
+            .get_result::<Mod>(connection)
+            .expect("Error inserting record");
 
-    // pub fn update(self, connection: &mut PgConnection)
-    // where
-    //     Mod: Diffable + AsChangeset<Target = Tab>,
-    //     Tab: IntoUpdateTarget + HasTable<Table = Tab> + QuerySource + QueryFragment<Pg>,
-    //     <Tab as QuerySource>::FromClause: QueryFragment<Pg>,
-    //     <Tab as IntoUpdateTarget>::WhereClause: QueryFragment<Pg>,
-    //     Mod::Changeset: QueryFragment<Pg>, // Add this bound for the Changeset
-    //     diesel::query_builder::UpdateStatement<
-    //         Tab,
-    //         <Tab as IntoUpdateTarget>::WhereClause,
-    //         Mod::Changeset,
-    //     >: AsQuery,
-    // {
-    //     use diesel::RunQueryDsl;
-    //
-    //     diesel::update(self.table)
-    //         .set(self.record)
-    //         .execute(connection)
-    //         .expect("Error updating record");
-    // }
+        Ok(())
+    }
 }
 
 pub trait ModelLifecycle<T: diesel::Table> {
@@ -114,27 +85,28 @@ pub trait ModelLifecycle<T: diesel::Table> {
     fn after_delete(&mut self) {}
 }
 
-impl<Mod, Ins, Tab> Model<Mod, Ins, Tab>
+impl<Mod, Tab> Model<Mod, Tab>
 where
-    Mod: Columns + Diffable,
-    Ins: Columns + Insertable<Tab>,
     Tab: Table,
 {
-    pub fn new(record: Mod, table: Tab) -> Self {
-        Model {
-            record: ModelType::Model(record.clone()),
-            initial: Some(record),
-            table,
-        }
-    }
-
-    // pub fn insertable(record: Ins, table: Tab) -> Self {
+    // pub fn new(record: Mod, table: Tab) -> Self {
     //     Model {
-    //         record,
-    //         initial: None,
+    //         record: ModelType::Model(record.clone()),
+    //         initial: Some(record),
     //         table,
     //     }
     // }
+
+    pub fn insertable(record: Mod, table: Tab) -> Self
+    where
+        Mod: Insertable<Tab>,
+    {
+        Model {
+            record,
+            initial: None,
+            table,
+        }
+    }
     //
     // pub fn is_new(&self) -> bool {
     //     self.initial.is_none()

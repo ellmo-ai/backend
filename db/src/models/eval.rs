@@ -1,5 +1,7 @@
 use crate::models::base::diff::{Diff, Diffable};
 use crate::models::base::model::{Columns, Model};
+use diesel::associations::HasTable;
+use diesel::deserialize::FromSqlRow;
 
 use crate::models::repository::{DieselRepository, Repository};
 use crate::schema::eval::dsl::eval;
@@ -72,29 +74,28 @@ impl Diffable for Eval {
 }
 
 #[allow(dead_code)]
-fn foo() {
-    let e = Eval {
-        id: 1,
-        name: "foo".to_string(),
-        created_at: chrono::Utc::now(),
-        prompt_version_id: 1,
-    };
-
-    let model: Model<Eval, InsertableEval, crate::schema::eval::table> =
-        Model::new(e, crate::schema::eval::table);
-    let mut connection = crate::establish_connection();
-    let _ = model.insert(&mut connection);
-
-    // let e2 = Eval {
-    //     id: 1,
-    //     name: "foo".to_string(),
-    //     created_at: chrono::Utc::now(),
-    //     prompt_version_id: 1,
-    // };
-    //
-    // let model = Model::new(e2, crate::schema::eval::table);
-    // model.update(&mut connection);
-}
+// fn foo() {
+//     let e = InsertableEval {
+//         name: "foo".to_string(),
+//         created_at: chrono::Utc::now(),
+//         prompt_version_id: 1,
+//     };
+//
+//     let model: Model<InsertableEval, crate::schema::eval::table> =
+//         Model::insertable(e, crate::schema::eval::table);
+//     let mut connection = crate::establish_connection();
+//     let _ = model.insert(&mut connection);
+//
+//     // let e2 = Eval {
+//     //     id: 1,
+//     //     name: "foo".to_string(),
+//     //     created_at: chrono::Utc::now(),
+//     //     prompt_version_id: 1,
+//     // };
+//     //
+//     // let model = Model::new(e2, crate::schema::eval::table);
+//     // model.update(&mut connection);
+// }
 
 impl<'a> Repository for DieselRepository<'a, eval> {
     type Entity = Eval;
@@ -114,14 +115,12 @@ impl<'a> Repository for DieselRepository<'a, eval> {
     fn create(&mut self, entity: &Self::InsertableEntity) -> QueryResult<Self::Entity> {
         diesel::insert_into(self.table)
             .values(entity)
-            .returning(crate::schema::eval::all_columns)
-            .get_result(self.connection)
+            .get_result::<Self::Entity>(self.connection)
     }
 
     fn update(&mut self, id: Self::Id, entity: &Self::Entity) -> QueryResult<Self::Entity> {
         diesel::update(self.table.find(id))
             .set(entity)
-            .returning(crate::schema::eval::all_columns)
             .get_result(self.connection)
     }
 
