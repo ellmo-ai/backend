@@ -1,7 +1,5 @@
 use crate::models::base::diff::{Diff, Diffable};
 use crate::models::base::model::Model;
-use diesel::associations::HasTable;
-use diesel::deserialize::FromSqlRow;
 
 use crate::models::repository::{DieselRepository, Repository};
 use crate::schema::eval::dsl::eval;
@@ -39,7 +37,7 @@ impl Diffable for Eval {
 
 #[allow(dead_code)]
 fn foo() {
-    let model = Model::insertable(
+    let model = Model::<Eval, InsertableEval, crate::schema::eval::table>::insertable(
         InsertableEval {
             name: "foo".to_string(),
             created_at: chrono::Utc::now(),
@@ -47,7 +45,8 @@ fn foo() {
         },
         crate::schema::eval::table,
     );
-    let mut connection = crate::establish_connection();
+
+    // let mut connection = crate::establish_connection();
     // let res = model.save();
     // let res = model.insert::<Eval>(&mut connection);
 
