@@ -3,15 +3,13 @@
 use crate::models::base::diff;
 
 use diesel::associations::HasTable;
-use diesel::deserialize::FromSqlRow;
-use diesel::expression::{NonAggregate, SelectableExpression};
 use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::query_builder::{AsQuery, IntoUpdateTarget, QueryFragment, QueryId};
+use diesel::query_builder::{InsertStatement, IntoUpdateTarget, QueryId};
+use diesel::query_dsl::LoadQuery;
 use diesel::{Insertable, QuerySource};
-use serde::Serialize;
 
-use diff::{Change, Diffable};
+use diff::Diffable;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -42,36 +40,30 @@ where
     table: Tab,
 }
 
-pub trait Columns {
-    type ReturnType: QueryFragment<diesel::pg::Pg> + QueryId + NonAggregate;
-
-    fn columns() -> Self::ReturnType;
-}
-
-impl<Mod, Tab> Model<Mod, Tab>
+impl<Ins, Tab> Model<Ins, Tab>
 where
     Tab: diesel::Table + QueryId + 'static,
-    Mod: Insertable<Tab> + Columns + Selectable<diesel::pg::Pg>,
-
-    // Needed for returning clause in insert
-    <Mod as Columns>::ReturnType:
-        SelectableExpression<Tab> + QueryFragment<diesel::pg::Pg> + NonAggregate,
+    Ins: Insertable<Tab>,
 {
-    pub fn insert(self, connection: &mut PgConnection) -> Result<(), ModelError>
+    pub fn insert<Mod>(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
     where
-        <Mod as diesel::Insertable<Tab>>::Values: diesel::query_builder::QueryId
+        Mod: Queryable<Tab::SqlType, diesel::pg::Pg>,
+        <Ins as Insertable<Tab>>::Values: diesel::query_builder::QueryId
             + diesel::query_builder::QueryFragment<diesel::pg::Pg>
             + diesel::insertable::CanInsertInSingleQuery<diesel::pg::Pg>,
         <Tab as QuerySource>::FromClause: diesel::query_builder::QueryFragment<diesel::pg::Pg>,
+        Tab: IntoUpdateTarget,
+        InsertStatement<Tab, <Ins as Insertable<Tab>>::Values>:
+            LoadQuery<'static, PgConnection, Mod>,
     {
         use diesel::RunQueryDsl;
 
         let res = diesel::insert_into(self.table)
             .values(self.record)
             .get_result::<Mod>(connection)
-            .expect("Error inserting record");
+            .map_err(ModelError::QueryError)?;
 
-        Ok(())
+        Ok(res)
     }
 }
 

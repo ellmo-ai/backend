@@ -1,5 +1,5 @@
 use crate::models::base::diff::{Diff, Diffable};
-use crate::models::base::model::{Columns, Model};
+use crate::models::base::model::Model;
 use diesel::associations::HasTable;
 use diesel::deserialize::FromSqlRow;
 
@@ -31,42 +31,6 @@ pub struct InsertableEval {
     pub prompt_version_id: i32,
 }
 
-impl Columns for InsertableEval {
-    type ReturnType = (
-        crate::schema::eval::id,
-        crate::schema::eval::name,
-        crate::schema::eval::created_at,
-        crate::schema::eval::prompt_version_id,
-    );
-
-    fn columns() -> Self::ReturnType {
-        (
-            crate::schema::eval::id,
-            crate::schema::eval::name,
-            crate::schema::eval::created_at,
-            crate::schema::eval::prompt_version_id,
-        )
-    }
-}
-
-impl Columns for Eval {
-    type ReturnType = (
-        crate::schema::eval::id,
-        crate::schema::eval::name,
-        crate::schema::eval::created_at,
-        crate::schema::eval::prompt_version_id,
-    );
-
-    fn columns() -> Self::ReturnType {
-        (
-            crate::schema::eval::id,
-            crate::schema::eval::name,
-            crate::schema::eval::created_at,
-            crate::schema::eval::prompt_version_id,
-        )
-    }
-}
-
 impl Diffable for Eval {
     fn diff(&self, _other: &Self) -> Option<Diff> {
         None
@@ -74,28 +38,28 @@ impl Diffable for Eval {
 }
 
 #[allow(dead_code)]
-// fn foo() {
-//     let e = InsertableEval {
-//         name: "foo".to_string(),
-//         created_at: chrono::Utc::now(),
-//         prompt_version_id: 1,
-//     };
-//
-//     let model: Model<InsertableEval, crate::schema::eval::table> =
-//         Model::insertable(e, crate::schema::eval::table);
-//     let mut connection = crate::establish_connection();
-//     let _ = model.insert(&mut connection);
-//
-//     // let e2 = Eval {
-//     //     id: 1,
-//     //     name: "foo".to_string(),
-//     //     created_at: chrono::Utc::now(),
-//     //     prompt_version_id: 1,
-//     // };
-//     //
-//     // let model = Model::new(e2, crate::schema::eval::table);
-//     // model.update(&mut connection);
-// }
+fn foo() {
+    let model = Model::insertable(
+        InsertableEval {
+            name: "foo".to_string(),
+            created_at: chrono::Utc::now(),
+            prompt_version_id: 1,
+        },
+        crate::schema::eval::table,
+    );
+    let mut connection = crate::establish_connection();
+    let res = model.insert::<Eval>(&mut connection);
+
+    // let e2 = Eval {
+    //     id: 1,
+    //     name: "foo".to_string(),
+    //     created_at: chrono::Utc::now(),
+    //     prompt_version_id: 1,
+    // };
+    //
+    // let model = Model::new(e2, crate::schema::eval::table);
+    // model.update(&mut connection);
+}
 
 impl<'a> Repository for DieselRepository<'a, eval> {
     type Entity = Eval;
