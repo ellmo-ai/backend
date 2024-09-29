@@ -3,9 +3,8 @@
 use crate::models::base::diff;
 
 use diesel::associations::HasTable;
-use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::query_builder::{InsertStatement, IntoUpdateTarget, QueryId};
+use diesel::query_builder::{AsQuery, InsertStatement, IntoUpdateTarget, QueryFragment, QueryId};
 use diesel::query_dsl::LoadQuery;
 use diesel::{Insertable, QuerySource};
 
@@ -67,13 +66,46 @@ where
     }
 }
 
-pub trait ModelLifecycle<T: diesel::Table> {
-    fn before_save(&mut self) {}
-    fn before_update(&mut self) {}
-    fn before_delete(&mut self) {}
+impl<Mod, Tab> Model<Mod, Tab>
+where
+    Tab: diesel::Table + QueryId + 'static,
+    Mod: Diffable + AsChangeset<Target = Tab> + Queryable<Tab::SqlType, diesel::pg::Pg>,
+{
+    pub fn update(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
+    where
+        Tab: IntoUpdateTarget + HasTable<Table = Tab> + QuerySource + QueryFragment<diesel::pg::Pg>,
+        <Tab as QuerySource>::FromClause: QueryFragment<diesel::pg::Pg>,
+        <Tab as IntoUpdateTarget>::WhereClause: QueryFragment<diesel::pg::Pg>,
+        Mod::Changeset: QueryFragment<diesel::pg::Pg>,
+        diesel::query_builder::UpdateStatement<
+            Tab,
+            <Tab as IntoUpdateTarget>::WhereClause,
+            Mod::Changeset,
+        >: LoadQuery<'static, PgConnection, Mod> + AsQuery,
+    {
+        use diesel::RunQueryDsl;
 
+        let res = diesel::update(self.table)
+            .set(self.record)
+            .get_result::<Mod>(connection)
+            .map_err(ModelError::QueryError)?;
+
+        Ok(res)
+    }
+}
+
+pub trait ModelLifecycle<T: diesel::Table> {
+    /// Called before saving the model
+    fn before_save(&mut self) {}
+    /// Called before updating the model
+    fn before_update(&mut self) {}
+    /// Called before deleting the model
+    fn before_delete(&mut self) {}
+    /// Called after saving the model
     fn after_save(&mut self) {}
+    /// Called after updating the model
     fn after_update(&mut self) {}
+    /// Called after deleting the model
     fn after_delete(&mut self) {}
 }
 
