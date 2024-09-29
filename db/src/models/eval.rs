@@ -48,7 +48,8 @@ fn foo() {
         crate::schema::eval::table,
     );
     let mut connection = crate::establish_connection();
-    let res = model.insert::<Eval>(&mut connection);
+    // let res = model.save();
+    // let res = model.insert::<Eval>(&mut connection);
 
     // let e2 = Eval {
     //     id: 1,

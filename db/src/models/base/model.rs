@@ -8,19 +8,17 @@ use diesel::query_builder::{AsQuery, InsertStatement, IntoUpdateTarget, QueryFra
 use diesel::query_dsl::LoadQuery;
 use diesel::{Insertable, QuerySource};
 
+use crate::models::base::diff::Change;
 use diff::Diffable;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
+    #[error("Cannot delete a new record: {0}")]
+    CannotDelete(&'static str),
     #[error("Record already exists")]
     AlreadyExists,
     #[error("Diesel error: {0}")]
     QueryError(#[from] diesel::result::Error),
-}
-
-enum ModelType<Mod, Ins> {
-    Insertable(Ins),
-    Model(Mod),
 }
 
 /// A helper struct for working with Diesel models
@@ -44,7 +42,7 @@ where
     Tab: diesel::Table + QueryId + 'static,
     Ins: Insertable<Tab>,
 {
-    pub fn insert<Mod>(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
+    fn insert<Mod>(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
     where
         Mod: Queryable<Tab::SqlType, diesel::pg::Pg>,
         <Ins as Insertable<Tab>>::Values: diesel::query_builder::QueryId
@@ -71,7 +69,7 @@ where
     Tab: diesel::Table + QueryId + 'static,
     Mod: Diffable + AsChangeset<Target = Tab> + Queryable<Tab::SqlType, diesel::pg::Pg>,
 {
-    pub fn update(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
+    fn update(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
     where
         Tab: IntoUpdateTarget + HasTable<Table = Tab> + QuerySource + QueryFragment<diesel::pg::Pg>,
         <Tab as QuerySource>::FromClause: QueryFragment<diesel::pg::Pg>,
@@ -111,15 +109,16 @@ pub trait ModelLifecycle<T: diesel::Table> {
 
 impl<Mod, Tab> Model<Mod, Tab>
 where
+    Mod: Clone,
     Tab: Table,
 {
-    // pub fn new(record: Mod, table: Tab) -> Self {
-    //     Model {
-    //         record: ModelType::Model(record.clone()),
-    //         initial: Some(record),
-    //         table,
-    //     }
-    // }
+    pub fn new(record: Mod, table: Tab) -> Self {
+        Model {
+            record: record.clone(),
+            initial: Some(record),
+            table,
+        }
+    }
 
     pub fn insertable(record: Mod, table: Tab) -> Self
     where
@@ -131,64 +130,67 @@ where
             table,
         }
     }
-    //
-    // pub fn is_new(&self) -> bool {
-    //     self.initial.is_none()
-    // }
-    //
-    // pub fn record(&self) -> &Mod {
-    //     &self.record
-    // }
-    //
-    // pub fn initial(&self) -> &Option<Mod> {
-    //     &self.initial
-    // }
-    //
-    // fn changes(&self, is_delete: bool) -> Option<Change>
-    // where
-    //     Mod: Diffable,
-    // {
-    //     if is_delete {
-    //         return Some(Change::Delete(serde_json::to_value(&self.record).unwrap()));
-    //     }
-    //
-    //     match self.initial {
-    //         None => Some(Change::Insert(serde_json::to_value(&self.record).unwrap())),
-    //         Some(ref initial) => self.record.diff(initial).map(Change::Update),
-    //     }
-    // }
-    //
-    // pub fn save(&mut self)
-    // where
-    //     Mod: Diffable,
-    // {
-    //     let changes = self.changes(false);
-    //
-    //     match changes {
-    //         Some(Change::Insert(_)) => {
-    //             // self.record.save();
-    //             self.initial = Some(self.record.clone());
-    //         }
-    //         Some(Change::Update(_)) => {
-    //             // self.record.update();
-    //             self.initial = Some(self.record.clone());
-    //         }
-    //         _ => (),
-    //     }
-    // }
-    //
-    // pub fn delete(&mut self)
-    // where
-    //     Mod: Diffable,
-    // {
-    //     if self.is_new() {
-    //         // Nothing to delete
-    //         return;
-    //     }
-    //
-    //     // self.record.delete();
-    //     self.initial = None;
-    //
-    //     let _changes = self.changes(true);
-    // }
+
+    pub fn is_new(&self) -> bool {
+        self.initial.is_none()
+    }
+
+    pub fn record(&self) -> &Mod {
+        &self.record
+    }
+
+    pub fn initial(&self) -> &Option<Mod> {
+        &self.initial
+    }
+
+    fn changes(&self, is_delete: bool) -> Option<Change>
+    where
+        Mod: Diffable,
+    {
+        if is_delete {
+            return Some(Change::Delete(serde_json::to_value(&self.record).unwrap()));
+        }
+
+        match self.initial {
+            None => Some(Change::Insert(serde_json::to_value(&self.record).unwrap())),
+            Some(ref initial) => self.record.diff(initial).map(Change::Update),
+        }
+    }
+
+    pub fn save(&mut self, connection: &mut PgConnection) -> Result<(), ModelError>
+    where
+        Mod: Queryable<Tab::SqlType, diesel::pg::Pg>
+            + AsChangeset<Target = Tab>
+            + Insertable<Tab>
+            + Diffable,
+        Tab: QueryId + IntoUpdateTarget + HasTable<Table = Tab> + QuerySource + QueryId,
+    {
+        // // &self.before_save();
+        //
+        // if &self.is_new() {
+        //     &self.insert(connection)?;
+        // } else {
+        //     &self.update(connection)?;
+        // }
+        //
+        // &self.after_save();
+
+        Ok(())
+    }
+
+    pub fn delete(&mut self) -> Result<(), ModelError>
+    where
+        Mod: Diffable,
+    {
+        if self.is_new() {
+            return Err(ModelError::CannotDelete("Cannot delete a new record"));
+        }
+
+        // self.record.delete();
+        self.initial = None;
+
+        let _changes = self.changes(true);
+
+        Ok(())
+    }
 }
