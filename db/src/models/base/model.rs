@@ -40,38 +40,43 @@ where
 impl<Ins, Tab> Model<Ins, Tab>
 where
     Tab: diesel::Table + QueryId + 'static,
-    Ins: Insertable<Tab>,
+    Ins: Insertable<Tab> + Clone,
 {
-    fn insert<Mod>(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
+    fn insert<Mod>(&mut self, connection: &mut PgConnection) -> Result<(), ModelError>
     where
-        Mod: Queryable<Tab::SqlType, diesel::pg::Pg>,
+        Mod: Queryable<Tab::SqlType, diesel::pg::Pg> + Clone,
         <Ins as Insertable<Tab>>::Values: diesel::query_builder::QueryId
             + diesel::query_builder::QueryFragment<diesel::pg::Pg>
             + diesel::insertable::CanInsertInSingleQuery<diesel::pg::Pg>,
         <Tab as QuerySource>::FromClause: diesel::query_builder::QueryFragment<diesel::pg::Pg>,
         Tab: IntoUpdateTarget,
+        Tab: HasTable<Table = Tab> + QuerySource + QueryFragment<diesel::pg::Pg>,
         InsertStatement<Tab, <Ins as Insertable<Tab>>::Values>:
             LoadQuery<'static, PgConnection, Mod>,
     {
         use diesel::RunQueryDsl;
 
-        let res = diesel::insert_into(self.table)
-            .values(self.record)
+        let res = diesel::insert_into(Tab::table())
+            .values(self.record.clone())
             .get_result::<Mod>(connection)
             .map_err(ModelError::QueryError)?;
 
-        Ok(res)
+        // Update initial and record with the result
+        // self.initial = Some(res.clone());
+        // self.record = res;
+
+        Ok(())
     }
 }
 
 impl<Mod, Tab> Model<Mod, Tab>
 where
-    Tab: diesel::Table + QueryId + 'static,
-    Mod: Diffable + AsChangeset<Target = Tab> + Queryable<Tab::SqlType, diesel::pg::Pg>,
+    Tab: diesel::Table + QueryId + 'static + IntoUpdateTarget,
+    Mod: Diffable + AsChangeset<Target = Tab> + Queryable<Tab::SqlType, diesel::pg::Pg> + Clone,
 {
-    fn update(self, connection: &mut PgConnection) -> Result<Mod, ModelError>
+    fn update(&mut self, connection: &mut PgConnection) -> Result<(), ModelError>
     where
-        Tab: IntoUpdateTarget + HasTable<Table = Tab> + QuerySource + QueryFragment<diesel::pg::Pg>,
+        Tab: HasTable<Table = Tab> + QuerySource + QueryFragment<diesel::pg::Pg>,
         <Tab as QuerySource>::FromClause: QueryFragment<diesel::pg::Pg>,
         <Tab as IntoUpdateTarget>::WhereClause: QueryFragment<diesel::pg::Pg>,
         Mod::Changeset: QueryFragment<diesel::pg::Pg>,
@@ -81,14 +86,18 @@ where
             Mod::Changeset,
         >: LoadQuery<'static, PgConnection, Mod> + AsQuery,
     {
-        use diesel::RunQueryDsl;
+        use diesel::{QueryDsl, RunQueryDsl};
 
-        let res = diesel::update(self.table)
-            .set(self.record)
+        let res = diesel::update(Tab::table())
+            .set(self.record.clone())
             .get_result::<Mod>(connection)
             .map_err(ModelError::QueryError)?;
 
-        Ok(res)
+        // Update initial and record with the result
+        // self.initial = Some(res.clone());
+        // self.record = res;
+
+        Ok(())
     }
 }
 
@@ -155,42 +164,5 @@ where
             None => Some(Change::Insert(serde_json::to_value(&self.record).unwrap())),
             Some(ref initial) => self.record.diff(initial).map(Change::Update),
         }
-    }
-
-    pub fn save(&mut self, connection: &mut PgConnection) -> Result<(), ModelError>
-    where
-        Mod: Queryable<Tab::SqlType, diesel::pg::Pg>
-            + AsChangeset<Target = Tab>
-            + Insertable<Tab>
-            + Diffable,
-        Tab: QueryId + IntoUpdateTarget + HasTable<Table = Tab> + QuerySource + QueryId,
-    {
-        // // &self.before_save();
-        //
-        // if &self.is_new() {
-        //     &self.insert(connection)?;
-        // } else {
-        //     &self.update(connection)?;
-        // }
-        //
-        // &self.after_save();
-
-        Ok(())
-    }
-
-    pub fn delete(&mut self) -> Result<(), ModelError>
-    where
-        Mod: Diffable,
-    {
-        if self.is_new() {
-            return Err(ModelError::CannotDelete("Cannot delete a new record"));
-        }
-
-        // self.record.delete();
-        self.initial = None;
-
-        let _changes = self.changes(true);
-
-        Ok(())
     }
 }
