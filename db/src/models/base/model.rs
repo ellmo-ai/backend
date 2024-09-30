@@ -7,18 +7,17 @@ use diesel::prelude::*;
 use diesel::query_builder::{AsQuery, InsertStatement, IntoUpdateTarget, QueryFragment, QueryId};
 use diesel::query_dsl::LoadQuery;
 use diesel::{Insertable, QuerySource};
+use serde::Serialize;
 
 use crate::models::base::diff::Change;
 use diff::Diffable;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
-    #[error("Cannot delete a new record: {0}")]
-    CannotDelete(&'static str),
-    #[error("Record already exists")]
-    AlreadyExists,
     #[error("Diesel error: {0}")]
     QueryError(#[from] diesel::result::Error),
+    #[error("Serialization error: {0}")]
+    SerializationError(#[from] serde_json::Error),
 }
 
 /// A helper struct for working with Diesel models
@@ -39,12 +38,16 @@ where
 
 impl<Ins, Tab> Model<Ins, Tab>
 where
-    Tab: diesel::Table + QueryId + 'static,
-    Ins: Insertable<Tab> + Clone,
+    Tab: diesel::Table + QueryId + 'static + Clone,
+    Ins: Insertable<Tab> + Clone + ModelLifecycle<Tab>,
 {
-    fn insert<Mod>(&mut self, connection: &mut PgConnection) -> Result<(), ModelError>
+    pub async fn insert<Mod>(
+        &mut self,
+        connection: &mut PgConnection,
+    ) -> Result<Model<Mod, Tab>, ModelError>
     where
-        Mod: Queryable<Tab::SqlType, diesel::pg::Pg> + Clone,
+        Ins: Serialize,
+        Mod: Queryable<Tab::SqlType, diesel::pg::Pg> + Clone + ModelLifecycle<Tab>,
         <Ins as Insertable<Tab>>::Values: diesel::query_builder::QueryId
             + diesel::query_builder::QueryFragment<diesel::pg::Pg>
             + diesel::insertable::CanInsertInSingleQuery<diesel::pg::Pg>,
@@ -56,25 +59,39 @@ where
     {
         use diesel::RunQueryDsl;
 
-        let res = diesel::insert_into(Tab::table())
+        self.record.before_insert();
+
+        let mut res = diesel::insert_into(Tab::table())
             .values(self.record.clone())
             .get_result::<Mod>(connection)
             .map_err(ModelError::QueryError)?;
 
-        // Update initial and record with the result
-        // self.initial = Some(res.clone());
-        // self.record = res;
+        res.after_insert();
 
-        Ok(())
+        let change = Change::Insert(
+            serde_json::to_value(&self.record).map_err(ModelError::SerializationError)?,
+        );
+        change.sync().await;
+
+        // Update initial and record with the result
+        Ok(Model {
+            record: res.clone(),
+            initial: Some(res),
+            table: self.table.clone(),
+        })
     }
 }
 
 impl<Mod, Tab> Model<Mod, Tab>
 where
     Tab: diesel::Table + QueryId + 'static + IntoUpdateTarget,
-    Mod: Diffable + AsChangeset<Target = Tab> + Queryable<Tab::SqlType, diesel::pg::Pg> + Clone,
+    Mod: Diffable
+        + AsChangeset<Target = Tab>
+        + Queryable<Tab::SqlType, diesel::pg::Pg>
+        + Clone
+        + ModelLifecycle<Tab>,
 {
-    fn update(&mut self, connection: &mut PgConnection) -> Result<(), ModelError>
+    pub async fn update(&mut self, connection: &mut PgConnection) -> Result<(), ModelError>
     where
         Tab: HasTable<Table = Tab> + QuerySource + QueryFragment<diesel::pg::Pg>,
         <Tab as QuerySource>::FromClause: QueryFragment<diesel::pg::Pg>,
@@ -86,30 +103,37 @@ where
             Mod::Changeset,
         >: LoadQuery<'static, PgConnection, Mod> + AsQuery,
     {
-        use diesel::{QueryDsl, RunQueryDsl};
+        use diesel::RunQueryDsl;
 
-        let res = diesel::update(Tab::table())
+        self.record.before_update();
+
+        let mut res = diesel::update(Tab::table())
             .set(self.record.clone())
             .get_result::<Mod>(connection)
             .map_err(ModelError::QueryError)?;
 
+        res.after_update();
+
         // Update initial and record with the result
-        // self.initial = Some(res.clone());
-        // self.record = res;
+        self.initial = Some(res.clone());
+        self.record = res;
+
+        self.changes(false)
+            .map(|changes| async move { changes.sync().await });
 
         Ok(())
     }
 }
 
 pub trait ModelLifecycle<T: diesel::Table> {
-    /// Called before saving the model
-    fn before_save(&mut self) {}
+    /// Called before inserting the model
+    fn before_insert(&mut self) {}
     /// Called before updating the model
     fn before_update(&mut self) {}
     /// Called before deleting the model
     fn before_delete(&mut self) {}
-    /// Called after saving the model
-    fn after_save(&mut self) {}
+    /// Called after inserting the model
+    fn after_insert(&mut self) {}
     /// Called after updating the model
     fn after_update(&mut self) {}
     /// Called after deleting the model

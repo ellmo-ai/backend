@@ -1,7 +1,5 @@
 pub mod models;
 pub mod schema;
-mod sync;
-
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;

@@ -1,5 +1,5 @@
 use crate::models::base::diff::{Diff, Diffable};
-use crate::models::base::model::Model;
+use crate::models::base::model::{Model, ModelLifecycle};
 use diesel::associations::HasTable;
 use diesel::deserialize::FromSqlRow;
 
@@ -37,9 +37,12 @@ impl Diffable for Eval {
     }
 }
 
+impl ModelLifecycle<eval> for Eval {}
+impl ModelLifecycle<eval> for InsertableEval {}
+
 #[allow(dead_code)]
-fn foo() {
-    let model = Model::insertable(
+async fn foo() {
+    let mut model = Model::insertable(
         InsertableEval {
             name: "foo".to_string(),
             created_at: chrono::Utc::now(),
@@ -48,8 +51,11 @@ fn foo() {
         crate::schema::eval::table,
     );
     let mut connection = crate::establish_connection();
-    // let res = model.save();
-    // let res = model.insert::<Eval>(&mut connection);
+
+    let res = model
+        .insert::<Eval>(&mut connection)
+        .await
+        .expect("Failed to insert");
 
     // let e2 = Eval {
     //     id: 1,

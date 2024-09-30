@@ -43,4 +43,3 @@ spec:
       port: 50051
       targetPort: rpc
       nodePort: 30002
-
