@@ -3,12 +3,13 @@ mod eval;
 use std::future::Future;
 use std::pin::Pin;
 
-use tonic::transport;
-
 use ellmo_proto::ellmo::ellmo_service_server::{EllmoService, EllmoServiceServer};
 use ellmo_proto::ellmo::{
     RecordEvalRequest, RecordEvalResponse, ReportSpanRequest, TestExecutionRequest,
 };
+use serde_json::{json, value::RawValue};
+use std::net::SocketAddr;
+use tonic::{transport, Request, Response, Status};
 
 #[derive(Default)]
 struct EllmoRpcDefinition {}
@@ -17,32 +18,62 @@ struct EllmoRpcDefinition {}
 impl EllmoService for EllmoRpcDefinition {
     async fn report_span(
         &self,
-        _request: tonic::Request<ReportSpanRequest>,
-    ) -> Result<tonic::Response<()>, tonic::Status> {
+        _request: Request<ReportSpanRequest>,
+    ) -> Result<Response<()>, Status> {
         println!("Received spans!");
-        Ok(tonic::Response::new(()))
+        Ok(Response::new(()))
     }
 
     async fn queue_test(
         &self,
-        request: tonic::Request<TestExecutionRequest>,
-    ) -> Result<tonic::Response<()>, tonic::Status> {
-        println!("Received test execution request!");
-
+        request: Request<TestExecutionRequest>,
+    ) -> Result<Response<()>, Status> {
         let message = request.into_inner();
-        // Each element in the Vec is an encoded argument
-        let input_bytes: Vec<Vec<u8>> = message.test_input;
-        for bytes in input_bytes {
-            let json_str = std::str::from_utf8(&bytes);
-            if let Ok(json) = json_str {
-                let raw_json: Result<Box<serde_json::value::RawValue>, serde_json::Error> =
-                    serde_json::from_str(json);
 
-                println!("{:?}", raw_json.unwrap());
+        let input = message
+            .test_input
+            .iter()
+            .find_map(|bytes| {
+                std::str::from_utf8(bytes)
+                    .ok()
+                    .and_then(|json_str| serde_json::from_str::<Box<RawValue>>(json_str).ok())
+            })
+            .ok_or_else(|| Status::invalid_argument("Invalid input"))?;
+
+        let test = message
+            .versioned_test
+            .ok_or_else(|| Status::invalid_argument("Missing versioned test"))?;
+
+        let payload = json!({
+            "test": {
+                "name": test.name,
+                "version": test.version
+            },
+            "input": input, // serde_json::to_string(&input).map_err(|_| Status::internal("Failed to serialize input"))?
+        });
+
+        println!(
+            "Forwarding test execution request to test runner, {} {}",
+            test.name, test.version
+        );
+
+        let client = reqwest::Client::new();
+        let res = client
+            .post("http://0.0.0.0:3001/execute")
+            .json(&payload)
+            .send()
+            .await;
+
+        return match res {
+            Ok(res) => {
+                if res.status().is_success() {
+                    Ok(Response::new(()))
+                } else {
+                    Err(Status::internal("Failed to execute test"))
+                }
             }
-        }
-
-        Ok(tonic::Response::new(()))
+            Err(_e) => Err(Status::internal("Failed to execute test")),
+        };
     }
 
     async fn record_eval(
@@ -58,7 +89,7 @@ pub struct RpcServer {
 }
 
 impl RpcServer {
-    pub async fn new(addr: core::net::SocketAddr) -> Self {
+    pub fn new(addr: core::net::SocketAddr) -> Self {
         let ellmo: EllmoRpcDefinition = EllmoRpcDefinition::default();
         let server = transport::Server::builder()
             .add_service(EllmoServiceServer::new(ellmo))
